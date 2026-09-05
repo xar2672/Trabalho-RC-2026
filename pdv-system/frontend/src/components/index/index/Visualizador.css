@@ -1,0 +1,91 @@
+body {
+    position: absolute;
+    margin: 0;
+
+    min-width: 100%;
+    min-height: 95vh;
+    height: auto;
+    width: auto;
+
+    box-sizing: border-box;
+
+    background-color: #363635;
+}
+
+body > .container {
+    position: relative;
+    height: 100%;
+}
+
+#imagem {
+    display: flex;
+    position: relative;
+
+    margin-top: 2vmax;
+    min-height: 95vh;
+    width: auto;
+    height: 75vmin;
+
+    justify-content: center;
+    transition: height 0.3s ease, width 0.3s ease;
+}
+
+#imagem > img {
+    height: 100%;
+    line-height: 100vh;
+
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    font-size: 6vmin;
+    text-align: center;
+
+    color: #FFFCF2;
+    filter: brightness(100%);
+}
+
+#deck {
+    display: flex;
+    position: fixed;
+    overflow: hidden;
+
+    z-index: 110;
+    bottom: 0;
+    left: 0;
+    
+    width: 100%;
+    padding: 1.25em 2vmin;
+
+    flex-direction: row;
+    justify-content: space-evenly;
+
+    transform: translateY(0px);
+    transition: transform 0.25s ease;
+    background-color: rgba(79, 79, 76, 0.2);
+
+    backdrop-filter: blur(5px);
+    -webkit-backdrop-filter: blur(5px);
+    &.animate {transform: translateY(100%);}
+}
+
+#deck > button {
+    position: relative;
+    cursor: pointer;
+
+    height: 3em;
+    aspect-ratio: 1 / 1;
+
+    padding: 0.25vmax;
+
+    border: none;
+    background: none;
+}
+
+button > img {
+    width: 100%;
+    height: 100%;
+
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    font-size: 2em;
+    text-align: center;
+
+    color: #FFFCF2;
+}

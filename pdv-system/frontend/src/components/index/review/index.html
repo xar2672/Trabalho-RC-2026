@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="pt_br">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0">
+    
+    <title>Avaliação da Feira</title>
+    <meta name="robots" content="noindex">
+    <link rel="icon" type="image/x-icon" href="/favicon.png">
+    
+    <link rel="stylesheet" href="/www/Website/index/review/Review.css">
+    <link rel="stylesheet" href="/www/Middle-end/Compatibility.css">
+    
+    <!-- Todas as Fontes do Website AQUI! -->
+    <style>
+        @font-face {
+            font-family: SamsungFont;
+            src: url(/www/Website/fonts/SamsungSans-Regular.ttf);
+        }
+    </style>
+
+    <noscript>Пожалуйста, включите Javascript, чтобы использовать эту страницу</noscript>
+    <script type="module" src="/www/Website/index/review/Review.js"></script>
+</head>
+
+<body class="dark-mode-var1">
+    <div class="container" id="back">
+        <div class="container" id="popup">
+            <div class="container dark-mode-var2" id="review">
+                <h2 lang="pt-BR">Avalie o seu Pedido com estas Estrelas</h2>
+                <h2 lang="en-US">Rate your Order with these Stars</h2>
+                <h2 lang="zh-CN">用这些星星来评价您的订单</h2>
+                <h2 lang="zh-TW">用這些星星來評價您的訂單</h2>
+
+                <div class="flex-container" id="stars">
+                    <button id="1">
+                        <img src="/www/Website//images/Avaliação/Estrela.png" alt="⭐">
+                    </button>
+                    <button id="2">
+                        <img src="/www/Website//images/Avaliação/Estrela.png" alt="⭐">
+                    </button>
+                    <button id="3">
+                        <img src="/www/Website//images/Avaliação/Estrela.png" alt="⭐">
+                    </button>
+                    <button id="4">
+                        <img src="/www/Website//images/Avaliação/Estrela.png" alt="⭐">
+                    </button>
+                    <button id="5">
+                        <img src="/www/Website//images/Avaliação/Estrela.png" alt="⭐">
+                    </button>
+                </div>
+            </div>
+
+            <div class="container dark-mode-var2" id="comnts">
+                <label class="flex-container">
+                    <button>
+                        <img src="/www/Website//images/Common/Plus.png" alt="➕">
+                    </button>
+                    
+                    <span role="textbox" class="dark-mode-var3" lang="pt-BR" id="comment-input" contenteditable="true" data-placeholder="Adicione um Comentário Aqui..."></span>
+                    <span role="textbox" class="dark-mode-var3" lang="en-US" id="comment-input" contenteditable="true" data-placeholder="Add a Comment Here..."></span>
+                    <span role="textbox" class="dark-mode-var3" lang="zh-CN" id="comment-input" contenteditable="true" data-placeholder="在这里添加评论..."></span>
+                    <span role="textbox" class="dark-mode-var3" lang="zh-TW" id="comment-input" contenteditable="true" data-placeholder="在這裡添加評論..."></span>
+                </label>
+            </div>
+
+            <div class="flex-container dark-mode-font1" id="send">
+                <label for="submit">
+                    <img src="/www/Website//images/Avaliação/Enviar.png" alt="▶️">
+                    <input type="submit" id="submit">
+                </label>
+            </div>
+        </div>
+    </div>
+    <div class="container" id="main">
+        <div class="container" id="notifications">
+            <svg id="sad_face" class="face feedback" version="1.1"  viewBox="0 0 130.2 130.2">
+                <circle class="path line" fill="none" stroke="#D06079" stroke-width="5" stroke-miterlimit="10" cx="65.1" cy="65.1" r="59.1"/>
+                <line class="path line" x1="50" y1="40" x2="50" y2="60" stroke="#D06079" stroke-width="10" stroke-linecap="round" stroke-miterlimit="10"/>
+                <line class="path line" x1="80" y1="40" x2="80" y2="60" stroke="#D06079" stroke-width="10" stroke-linecap="round" stroke-miterlimit="10"/>
+                <path class="path line" d="M 45 90 Q 65 60 85 90" stroke="#D06079" stroke-width="5" fill="none"/>
+            </svg>
+            <svg id="happy_face" class="face feedback" version="1.1"  viewBox="0 0 130.2 130.2">
+                <circle class="path line" fill="none" stroke="#73AF55" stroke-width="5" stroke-miterlimit="10" cx="65.1" cy="65.1" r="59.1"/>
+                <line class="path line" x1="50" y1="40" x2="50" y2="60" stroke="#73AF55" stroke-width="10" stroke-linecap="round" stroke-miterlimit="10"/>
+                <line class="path line" x1="80" y1="40" x2="80" y2="60" stroke="#73AF55" stroke-width="10" stroke-linecap="round" stroke-miterlimit="10"/>
+                <path class="path line" d="M 45 75 Q 65 105 85 75" stroke="#73AF55" stroke-width="5" fill="none"/>
+            </svg>
+
+            <h2 id="test" class="comment" lang="pt-BR">TESTE TESTE TESTE</h2>
+            
+            <h2 id="appreciation" class="confirm" lang="pt-BR">Agradecemos a Sua Avaliação!</h2>
+            <h2 id="appreciation" class="confirm" lang="en-US">Thank your for Reviewing Us!</h2>
+            <h2 id="appreciation" class="confirm" lang="zh-CN">感谢您的评价！</h2>
+            <h2 id="appreciation" class="confirm" lang="zh-TW">感謝您的評價！</h2>
+
+            <h2 id="error_issuer" class="error" lang="pt-BR">Oh, não! Parece que algo deu Errado</h2>
+            <h2 id="error_issuer" class="error" lang="en-US">Oh, no! Looks like something isn't Quite Right</h2>
+            <h2 id="error_issuer" class="error" lang="zh-CN">噢，不！似乎出了点问题</h2>
+            <h2 id="error_issuer" class="error" lang="zh-TW">噢，不！似乎出了點問題</h2>
+
+            <h2 id="text_issuer" class="error" lang="pt-BR">Oh, não!</h2>
+            <h2 id="text_issuer" class="error" lang="en-US">Oh, no!</h2>
+            <h2 id="text_issuer" class="error" lang="zh-CN">噢，不！</h2>
+            <h2 id="text_issuer" class="error" lang="zh-TW">噢，不！</h2>
+
+            <h2 id="star_issuer" class="error" lang="pt-BR">Oh, não! Parece que algo deu Errado</h2>
+            <h2 id="star_issuer" class="error" lang="en-US">Oh, no! Your Star Count doesn't line Up!</h2>
+            <h2 id="star_issuer" class="error" lang="zh-CN">噢，不！您的星数不对！</h2>
+            <h2 id="star_issuer" class="error" lang="zh-TW">噢，不！您的星數不對！</h2>
+
+            <h3 id="appreciation" lang="pt-BR">Caso deseje, você pode alterar sua avaliação ao reavaliar-nos</h3>
+            <h3 id="appreciation" lang="en-US">If so desired, you can change your review by doing it again</h3>
+            <h3 id="appreciation" lang="zh-CN">如果愿意，您可以重新评论</h3>
+            <h3 id="appreciation" lang="zh-TW">如果願意，您可以重新評論</h3>
+
+            <h3 id="error_issuer" lang="pt-BR">Pedimos perdão pelo ocorrido<br>Tente Novamente</h3>
+            <h3 id="error_issuer" lang="en-US">We're sorry for the happening<br>Try Again</h3>
+            <h3 id="error_issuer" lang="zh-CN">我们为发生的事情道歉<br>请再试一次</h3>
+            <h3 id="error_issuer" lang="zh-TW">我們為發生的事情道歉<br>請再試一次</h3>
+
+            <h3 id="text_issuer" lang="pt-BR">Algo de errado foi encontrado no Seu Comentário<br>Digite-o Novamente</h3>
+            <h3 id="text_issuer" lang="en-US">Something is wrong with your Commentary<br>Type it Again</h3>
+            <h3 id="text_issuer" lang="zh-CN">在您的评论中发现错误<br>请重新输入</h3>
+            <h3 id="text_issuer" lang="zh-TW">Algo de errado foi encontrado no Seu Comentário<br>Digite-o Novamente</h3>
+
+            <h3 id="star_issuer" lang="pt-BR">Parece que nenhuma nota foi contabilizada<br>Avalie-nos Novamente</h3>
+            <h3 id="star_issuer" lang="en-US">Looks like none of your score was counted<br>Review us Again</h3>
+            <h3 id="star_issuer" lang="zh-CN">似乎没有计入任何评分<br>请重新评价我们</h3>
+            <h3 id="star_issuer" lang="zh-TW">似乎沒有計入任何評分<br>請重新評價我們</h3>
+            
+            <h4 id="error_issuer" lang="pt-BR">ERRO: \Error\</h4>
+            <h4 id="error_issuer" lang="en-US">ERROR: \Error\</h4>
+            <h4 id="error_issuer" lang="zh-CN">错误: \Error\</h4>
+            <h4 id="error_issuer" lang="zh-TW">錯誤: \Error\</h4>
+        </div>
+        <div class="menu" id="translate">
+            <h2>
+                <span lang="pt-BR">Língua Escolhida</span>
+                <span lang="en-US">Preferred Language</span>
+                <span lang="zh-CN">选择的语言</span>
+                <span lang="zh-TW">選擇的語言</span>
+            </h2>
+            <ul id="options">
+                <li>Português</li>
+                <li>English</li>
+                <li>简体中文 (Simplified Chinese)</li>
+                <li>繁體中文 (Traditional Chinese)</li>
+            </ul>
+        </div>
+
+        <header>
+            <h1 lang="pt-BR">Avaliação do Pedido</h1>
+            <h1 lang="en-US">Order Review</h1>
+            <h1 lang="zh-CN">订单评价</h1>
+            <h1 lang="zh-TW">訂單評價</h1>
+
+            <h2 class="dark-mode-font1" lang="pt-BR">O que achou? Ajude-nos ao responder esta rápida pesquisa</h2>
+            <h2 class="dark-mode-font1" lang="en-US">What do you think? Help us by responding to this little survey</h2>
+            <h2 class="dark-mode-font1" lang="zh-CN">您觉得怎么样？通过回答这份快速调查来帮助我们</h2>
+            <h2 class="dark-mode-font1" lang="zh-TW">您覺得怎麼樣？通過回答這份快速調查來幫助我們</h2>
+        </header>
+
+        <footer>
+            <div class="flex-container dark-mode-font1" id="configs">
+                <button id="visualise_mode">
+                    <img src="/www/Website//images/Avaliação/Estrela.png" alt="☀️">
+                </button>
+                <button id="language">
+                    <img src="/www/Website//images/Common/Idioma.png" alt="🌐🔠">
+                </button>
+            </div>
+            <div class="flex-container" id="cliente">
+                <div class="container dark-mode-var2" id="menu">
+                    <label for="pagador" lang="pt-BR">Número da Comanda</label>
+                    <label for="pagador" lang="en-US">Order Number</label>
+                    <label for="pagador" lang="zh-CN">订单编号</label>
+                    <label for="pagador" lang="zh-TW">訂單編號</label>
+
+                    <input type="number" class="dark-mode-var3" id="pagador" lang="pt-BR" name="nome" min="1000" max="9999" placeholder="Insira o Número Aqui...">
+                    <input type="number" class="dark-mode-var3" id="pagador" lang="en-US" name="nome" min="1000" max="9999" placeholder="Insert the Number Here...">
+                    <input type="number" class="dark-mode-var3" id="pagador" lang="zh-CN" name="nome" min="1000" max="9999" placeholder="在这里输入编号...">
+                    <input type="number" class="dark-mode-var3" id="pagador" lang="zh-TW" name="nome" min="1000" max="9999" placeholder="在這裡輸入編號...">
+                    
+                    <div class="feedback dark-mode-loader" id="loader"></div>
+                    <svg class="feedback" version="1.1" viewBox="0 0 130.2 130.2">
+                        <line id="wrongMark" class="path line" fill="none" stroke="#D06079" stroke-width="20" stroke-linecap="round" stroke-miterlimit="10" x1="95.8" y1="38" x2="34.4" y2="92.2"/>
+                        <line id="wrongMark" class="path line" fill="none" stroke="#D06079" stroke-width="20" stroke-linecap="round" stroke-miterlimit="10" x1="34.4" y1="37.9" x2="95.8" y2="92.3"/>
+                    </svg>
+                    <svg class="feedback" version="1.1"  viewBox="0 0 130.2 130.2">
+                        <polyline id="correctMark" class="path check" fill="none" stroke="#73AF55" stroke-width="20" stroke-linecap="round" stroke-miterlimit="10" points="100.2,40.2 51.5,88.8 29.8,67.5 "/>
+                    </svg>
+                </div>
+
+                <div class="container" id="list">
+                    <h2 class="dark-mode-font1" lang="pt-BR">Produtos Comprados</h2>
+                    <h2 class="dark-mode-font1" lang="en-US">Purchased Products</h2>
+                    <h2 class="dark-mode-font1" lang="zh-CN">购买的产品</h2>
+                    <h2 class="dark-mode-font1" lang="zh-TW">購買的產品</h2>
+                    
+                    <div class="container dark-mode-var2" id="menu">
+                        <table>
+                            <tbody>
+                                <tr id="copy">
+                                    <td class="img">
+                                        <img src="/www/Website//images/Common/Itens Dispostos/Água.png" alt="">
+                                    </td>
+                                    <td class="id">Geladinho</td>
+                                    <td class="num">x1</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="flex-container" id="button">
+                        <button id="avaliar" lang="pt-BR">Avaliar</button>
+                        <button id="avaliar" lang="en-US">Review</button>
+                        <button id="avaliar" lang="zh-CN">评价</button>
+                        <button id="avaliar" lang="zh-TW">評價</button>
+                    </div>
+                    <div class="grid-container dark-mode-font1" id="infos">
+                        <h3 lang="pt-BR">Nome:</h3>
+                        <h3 lang="en-US">Name:</h3>
+                        <h3 lang="zh-CN">名字:</h3>
+                        <h3 lang="zh-TW">名字:</h3>
+                        <p id="name">*</p>
+
+                        <h3 lang="pt-BR">Sobrenome:</h3>
+                        <h3 lang="en-US">Surname:</h3>
+                        <h3 lang="zh-CN">姓氏:</h3>
+                        <h3 lang="zh-TW">姓氏:</h3>
+                        <p id="surname">*</p>
+
+                        <h3 lang="pt-BR">Horário da Última Compra:</h3>
+                        <h3 lang="en-US">Last Purchase Hour:</h3>
+                        <h3 lang="zh-CN">上次购买时间:</h3>
+                        <h3 lang="zh-TW">上次購買時間:</h3>
+                        <p id="time">*</p>
+                    </div>
+                </div>
+                
+                <div class="container" id="error">
+                    <h2 class="dark-mode-font1" lang="pt-BR">Não foi Encontrada a Comanda Inserida</h2>
+                    <h2 class="dark-mode-font1" lang="en-US">It was not possible to find the Desired Order</h2>
+                    <h2 class="dark-mode-font1" lang="zh-CN">找不到输入的订单</h2>
+                    <h2 class="dark-mode-font1" lang="zh-TW">找不到輸入的訂單</h2>
+
+                    <svg id="sad_face" class="face feedback" version="1.1"  viewBox="0 0 130.2 130.2">
+                        <circle class="path line" fill="none" stroke="#64b5f6" stroke-width="5" stroke-miterlimit="10" cx="65.1" cy="65.1" r="59.1"/>
+                        <line class="path line" x1="50" y1="40" x2="50" y2="60" stroke="#64b5f6" stroke-width="10" stroke-linecap="round" stroke-miterlimit="10"/>
+                        <line class="path line" x1="80" y1="40" x2="80" y2="60" stroke="#64b5f6" stroke-width="10" stroke-linecap="round" stroke-miterlimit="10"/>
+                        <path class="path line" d="M 45 90 Q 65 60 85 90" stroke="#64b5f6" stroke-width="5" fill="none"/>
+                    </svg>
+                </div>
+            </div>
+        </footer>
+    </div>
+</body>

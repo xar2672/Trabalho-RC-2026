@@ -1,0 +1,812 @@
+body {
+    position: absolute;
+    margin: 0;
+
+    width: 100%;
+    min-height: 100vh;
+
+    box-sizing: border-box;
+}
+
+body > .container {
+    position: relative;
+    height: 100%;
+}
+
+
+h1 {
+    margin: 0;
+    
+    text-align: center;
+    font-size: 2.6em;
+}
+
+p, h2, h3, h4 {
+    overflow: hidden;
+
+    max-width: 70vmin;
+    margin: .8em auto 0;
+    line-height: 1.5em;
+
+    text-align: center;
+    font-size: 1em;
+}
+h3 {font-size: 0.85em;}
+p, h4 {
+    font-size: 0.6em;
+    margin: 0.25vmax auto 0;
+}
+
+
+header {
+    position: relative;
+    align-content: baseline;
+
+    padding: 2em 0 4em;
+    height: auto;
+
+    font-family: 'SamsungFont', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+header > h2 {
+    margin: .5em auto 0;
+    transition: color 1s cubic-bezier(0.47, 0, 0.745, 0.715);
+}
+
+.flex-container {
+    display: flex;
+    align-content: center;
+    justify-content: center;
+}
+.grid-container {display: grid;}
+
+footer {
+    position: relative;
+
+    width: 100%;
+    height: max-content;
+
+    font-family: 'SamsungFont', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+
+
+body > #main {padding: 5vmin;}
+
+#deck {
+    display: flex;
+    position: fixed;
+    overflow: hidden;
+
+    z-index: 110;
+    bottom: 0;
+    left: 0;
+    
+    width: 94%;
+    padding: 1.25em 3%;
+
+    flex-direction: row;
+    justify-content: space-evenly;
+
+    transition: transform .25s ease;
+    background-color: rgb(105, 105, 107, .125);
+
+    backdrop-filter: blur(2px);
+    -webkit-backdrop-filter: blur(2px);
+}
+
+#deck > button {
+    position: relative;
+    cursor: pointer;
+
+    gap: 1em;
+    align-items: center;
+    grid-template-columns: auto auto;
+
+    border: none;
+    background: none;
+}
+
+#deck h2 {
+    margin: 0;
+    height: min-content;
+
+    font-weight: bolder;
+    font-size: 1.25em;
+}
+
+#deck > button > div {
+    height: 3em;
+    aspect-ratio: 1 / 1;
+
+    padding: 0.25vmax;
+}
+
+#deck > button img {
+    width: 100%;
+    height: 100%;
+
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    font-size: 2em;
+    text-align: center;
+
+    color: #FFFCF2;
+}
+
+
+#products {
+    flex-direction: column;
+    row-gap: 2vmax;
+}
+
+label:not(.infos) {
+    display: block;
+    color: #64b5f6;
+    &.wrong {animation: wrong_text 1.5s cubic-bezier(0.165, 0.84, 0.44, 1)}
+}
+
+#menu > svg {height: 1.75em;}
+
+
+#list {
+    overflow: hidden;
+    display: none;
+
+    justify-content: start;
+    align-content: start;
+    margin-bottom: 5em;
+    padding-bottom: 5em;
+
+    grid-template-columns: repeat(auto-fit, minmax(20em, 1fr));
+    gap: 1.25em;
+
+    &.animate {display: grid;}
+}
+
+#list > button {
+    position: relative;
+    align-items: center;
+    justify-content: start;
+
+    border: none;
+    background: none;
+    padding: 0 2em;
+}
+#list > button label {
+    cursor: pointer;
+
+    padding: .65em 1em 1.25em;
+    border-radius: 1em;
+
+    height: 1em;
+    aspect-ratio: 1 / 1;
+
+    font-size: 1.65em;
+    text-align: center;
+
+    color: white;
+    background-color: #64b5f6;
+    transition: background-color .3s cubic-bezier(0.215, 0.610, 0.355, 1);
+}
+
+#list label {
+    font-size: 1.5em;
+    text-align: left;
+    font-weight: bolder;
+}
+
+#list .img {display: flex;}
+
+#list .img img {
+    height: 1.75rem;
+    font-size: 5vmin;
+}
+
+
+
+#list > div {
+    height: 0;
+    max-width: 20em;
+    overflow: hidden;
+
+    padding: 1.5rem;
+    border-radius: 1.25rem;
+
+    transform: translateY(50%);
+    transition: height .25s cubic-bezier(0.25, 0.46, 0.45, 0.94), transform .45s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    &.animate {transform: translateY(0%);}
+    &.alert {animation: alert_item 3s cubic-bezier(0.165, 0.84, 0.44, 1);}
+    &.wrong {animation: wrong_item 1.5s cubic-bezier(0.165, 0.84, 0.44, 1);}
+}
+
+#list > div > #menu {
+    flex-direction: column;
+    display: inline-flex;
+    width: min-content;
+    gap: 1em;
+}
+#list > div > #quantity {
+    flex-direction: column;
+    display: inline-flex;
+    width: 12.5%;
+    margin-right: 4%;
+}
+
+#list > div h2  {
+    background: none; 
+    margin: 1em 0;
+
+    &.selected {color: #64b5f6 !important;}
+}
+#list > div h3 {background: none; margin: .35em auto 0;}
+
+#list > div button {
+    position: relative;
+    border: none;
+    cursor: pointer;
+
+    padding: 15%;
+    border-radius: .5em;
+    font-size: 1.25em;
+
+    color: white;
+    background-color: #64b5f6;
+    transition: background-color .3s cubic-bezier(0.215, 0.610, 0.355, 1);
+}
+#list #quantity > #plus:active {background-color: #73AF55;}
+#list #quantity > #minus:active {background-color: #D06079;}
+
+
+#checkboxes {
+    display: none;
+    overflow: hidden;
+    height: 0;
+    
+    transform: translateY(50%);
+    transition: height .45s cubic-bezier(0.25, 0.46, 0.45, 0.94), transform .45s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    &.animate {transform: translateY(0%);}
+}
+
+#select_product {gap: .25rem;}
+#select_product svg {
+    position: absolute;
+
+    height: 1.5rem;
+    aspect-ratio: 1 / 1;
+    padding: .65em .75em;
+
+    transform: translateX(-100%);
+}
+
+select {
+    outline: none;
+    cursor: pointer;
+    appearance: none;
+
+    width: 13.95rem;
+    padding: .75em;
+    margin-bottom: .5em;
+
+    border-radius: .65em;
+    border: 2px solid transparent;
+    
+    transition: all .3s ease;
+}
+select:focus {
+    border-color: #555;
+}
+
+.arrow {
+    pointer-events: none;
+
+    stroke: #64b5f6;
+    stroke-width: 1em;
+    fill: none;
+
+    transition: transform .45s;
+    &.rotated {
+        transform: translateY(100%) rotateX(180deg);
+    }
+}
+
+
+#select_product #extra {
+    justify-content: center;
+    align-items: center;
+    height: auto;
+
+    gap: .75em 1.25em;
+    margin-top: .25em;
+    grid-template-columns: auto auto;
+}
+
+#select_product #extra > div {
+    padding: .75em;
+    border-radius: .65em;
+    transition: background-color .3s cubic-bezier(0.215, 0.610, 0.355, 1);
+}
+
+#select_product #extra label {
+    font-size: 1em;
+    cursor: pointer;
+    text-align: center;
+}
+#select_product #extra input {display: none;}
+#select_product #extra > div:has(input:checked) {
+    background-color: #64b5f6 !important;
+}
+
+/**/
+
+
+#list #price > h3, #list #price > p {
+    display: inline-block;
+    margin: 0;
+}
+#list #price > h3 {
+    width: 45%;
+    text-align: left;
+}
+#list #price > p {
+    width: 50%;
+    font-size: 0.85em;
+    text-align: right;
+}
+
+
+#products #error {
+    overflow: hidden;
+    display: none;
+
+    height: 0;
+    transform: translateY(50%);
+
+    transition: height 1s cubic-bezier(0.25, 0.46, 0.45, 0.94), transform 0.75s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    &.visible {display: inline-block;}
+    &.animate {transform: translateY(0%);}
+}
+
+#error h2 {
+    margin: 0 auto;
+    font-size: 1.6em;
+}
+
+#error > #sad_face {margin: 0 auto 1em;}
+
+
+
+#back {
+    position: fixed;
+    overflow: hidden;
+    display: none;
+    z-index: 666;
+
+    width: 100%;
+    
+    background-color: rgba(104, 104, 104, 0);
+    backdrop-filter: blur(0px);
+    -webkit-backdrop-filter: blur(0px);
+
+    transition: all 1s cubic-bezier(0.39, 0.575, 0.565, 1);
+    &.fade_in {
+        background-color: rgba(104, 104, 104, 0.35);
+        backdrop-filter: blur(3px);
+        -webkit-backdrop-filter: blur(3px);
+    }
+}
+
+#back > div {
+    z-index: 1000;
+    position: absolute;
+    display: inline-flex;
+
+    row-gap: 2.5vmax;
+    flex-direction: column-reverse;
+    
+    left: 0;
+    right: 0;
+    bottom: 0;
+    margin: 0 auto;
+
+    width: 35em;
+    padding: 3em 1em;
+
+    font-family: 'SamsungFont', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+#back > div h2 {
+    margin: 0 auto;
+    max-width: 60vmin;
+    
+    font-weight: bolder;
+    font-size: 2.5em;
+}
+#back > div h3 {
+    margin: 0 auto 1.5em;
+    max-width: 60vmin;
+    font-size: 1em;
+}
+
+
+#back > div > * {
+    position: relative;
+    justify-content: start;
+    scroll-snap-type: x mandatory;
+
+    overflow-x: hidden;
+    scroll-behavior: smooth;
+    scrollbar-color: #64b5f6 #69696b;
+
+    padding: 1.5em;
+    border-radius: 3vmin;
+
+    transition: transform 1s cubic-bezier(0.165, 0.84, 0.44, 1);
+    &.animate {transform: translateY(0%) !important;}
+}
+#back > div button {
+    position: relative;
+    cursor: pointer;
+    display: inline-block;
+
+    height: auto;
+    aspect-ratio: 1 / 1;
+
+    padding: 0.25vmax;
+    border: none;
+
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    font-size: 1vmin;
+    text-align: center;
+
+    background: none;
+}
+#back > div button img {height: 100%;}
+#back #overflow {
+    height: 100%;
+    width: max-content;
+}
+
+#back #selected {
+    max-height: 21.5em;
+    padding: 1.5em 3em 3em;
+    transform: translateY(-100%) translateY(1500px);
+}
+
+#back #selected > #overflow > *, #selected #process-payment > div > * {
+    background: none;
+    padding-right: 3em;
+    flex-direction: column;
+    scroll-snap-align: end;
+
+    height: min-content;
+    width: 29em;
+}
+#selected #process-payment #credito > .flex-container,
+#selected #process-payment #debito > .flex-container {
+    flex-direction: row;
+    justify-content: space-evenly;
+
+    & > h3 {margin: 0;}
+}
+
+
+#back #selected div[class="grid-container"] {row-gap: 1.5em;}
+#back #selected #overflow div > h2 {
+    margin: 0;
+    max-width: unset;
+}
+
+
+#selected #check-products table {
+    width: 100%;
+    border-collapse: collapse;
+}
+#selected #check-products th, td {
+    padding: 2vmin;
+    text-align: left;
+}
+#selected #check-products .img {display: flex;}
+#selected #check-products .img img {
+    height: 5vmin;
+    font-size: 5vmin;
+}
+
+
+#selected #select-payment > h2 {
+    line-height: 3.25rem;
+    margin-bottom: .35em;
+}
+#selected #select-payment > .grid-container {grid-template-columns: 1fr 1fr;}
+#selected #select-payment > .grid-container > * {
+    display: inline-grid;
+    aspect-ratio: unset;
+    cursor: pointer;
+
+    padding: .5em;
+    row-gap: 1.5em;
+
+    background: none;
+    & > .selected {opacity: 1 !important;}
+    & > label img[class="selected"] {filter: brightness(100%) !important;}
+}
+#selected #select-payment > * label {
+    cursor: pointer;
+    height: 3rem;
+}
+
+#selected #select-payment > * img {
+    filter: brightness(50%);
+    transition: filter .35s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+#selected #select-payment > * h2 {
+    background: none;
+
+    padding: .35em .75em;
+    border-radius: 2em;
+    opacity: .5;
+    margin: 0;
+
+    font-size: .7rem;
+    color: white;
+    background-color: #64b5f6;
+
+    transition: opacity .35s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+
+#selected #process-payment > div {
+    justify-content: start;
+    height: max-content;
+    overflow: hidden;
+}
+#selected #process-payment > div .flex-container {
+    flex-direction: column;
+    justify-content: start;
+    align-items: center;
+
+    min-width: 100%;
+    width: unset;
+}
+#selected #process-payment > h2 {line-height: 1em;}
+#selected #process-payment > h3 {margin: .5em auto 1em;}
+
+#selected #process-payment > div .flex-container > div:has(img) {height: 16em;}
+#selected #process-payment label {
+    font-size: 1.15em;
+    text-align: center;
+    margin-bottom: .5em;
+}
+#selected #process-payment img {height: 100%;}
+#selected #process-payment svg {margin: 0;}
+
+#selected #process-payment #loader {
+    height: 2em;
+    justify-self: center;
+    align-self: center;
+
+    border-top: 1px solid transparent;
+    border-left: 1px solid transparent;
+    border-bottom: 1px solid transparent;
+    border-right: 4px solid rgba(255, 255, 255, 0);
+    border-radius: 50%;
+}
+#selected #process-payment #qr_code {
+    transition: all .5s cubic-bezier(0.075, 0.82, 0.165, 1);
+    opacity: 0;
+    &.loaded {opacity: 1;}
+}
+#selected #process-payment #dinheiro_fisico, #selected #process-payment #sucesso {
+    gap: 1.5em;
+    height: 15em;
+    justify-content: center;
+
+    & > input {transition: all 1s cubic-bezier(0.075, 0.82, 0.165, 1);}
+}
+
+
+#back #left {justify-content: end;}
+#back input[type="submit"], #back #selected button  {
+    position: relative;
+    border: none;
+    cursor: pointer;
+
+    padding: 0.75em 3vmax;
+    border-radius: 2em;
+
+    font-size: 1em;
+
+    color: white;
+    background-color: #64b5f6;
+    &.wrong {animation: wrong_button 1.5s cubic-bezier(0.165, 0.84, 0.44, 1)}
+}
+
+#back input[type="text"], #back input[type="password"] {
+    appearance: textfield;
+
+    padding: 0 0.5vmin 0.5vmin 0;
+    border-radius: 0.25em;
+    width: 87.5%;
+    margin: 0;
+
+    border-top: none;
+    border-left: none;
+    border-right: none;
+
+    font-size: 1em;
+    background: none;
+    transition: border-color .15s, caret-color .15s;
+    &.wrong {animation: wrong_text 1.5s cubic-bezier(0.165, 0.84, 0.44, 1)}
+}
+#back input[type="text"]:focus, #back input[type="password"]:focus {
+    outline: none;
+    caret-color: #64b5f6;
+    border-color: #64b5f6;
+}
+
+
+
+#back .switch {
+    position: relative;
+    display: inline-block;
+
+    width: 4em;
+    height: 2.25em;
+}
+#back .switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+#back .slider {
+    position: absolute;
+    cursor: pointer;
+
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    border-radius: 3em;
+
+    transition: .125s;
+    background-color: #ccc;
+}
+#back .slider:before {
+    position: absolute;
+    content: "";
+
+    left: 15%;
+    bottom: 17.5%;
+    border-radius: 50%;
+
+    height: 1.5em;
+    aspect-ratio: 1 / 1;
+
+    transition: .4s;
+    background-color: white;
+}
+
+#back #configs #other-configurations input:checked + .slider {background-color: #64b5f6;}
+#back #configs #other-configurations input:checked + .slider:before {
+    transform: translateX(85%);
+}
+
+#back #configs #other-configurations > div {padding: 2.5%;}
+#back #configs #other-configurations > div h3 {
+    margin: 0;
+    width: 50%;
+}
+#back #configs #other-configurations > div select {
+    margin: 0;
+    width: 60%;
+}
+
+#back #configs #other-configurations > div .center {align-items: center;}
+#back #configs #other-configurations > div > .flex-container {justify-content: space-between;}
+
+
+#back #status-account > #happy_face {
+    margin-left: auto;
+    margin-right: auto;
+}
+
+#back #status-account > #infos {
+    gap: 0.5vmax;
+    grid-template-columns: 75% auto;
+    margin-top: 2vmax;
+}
+
+#back #status-account > #infos p,
+#back #status-account > #infos h4,
+#back #status-account > #infos h3 {
+    margin: 0;
+    max-width: none;
+    text-align: right;
+}
+#back #status-account > #infos p {
+    text-align: left;
+    word-wrap: break-word;
+}
+
+
+#back #selector {
+    overflow-x: scroll;
+    transform: translateY(100%) translateY(-1500px);
+}
+#back #selector > #overflow > * {
+    scroll-snap-align: end;
+    background: none;
+
+    margin-right: 3em;
+    width: 10rem;
+}
+#back #selector button {
+    display: inline-grid;
+    aspect-ratio: unset;
+    cursor: pointer;
+
+    min-width: 25em;
+    row-gap: 1.5em;
+    & > .selected {opacity: 1 !important;}
+    & > label img[class="selected"] {filter: brightness(100%) !important;}
+}
+#back #selector label {
+    cursor: pointer;
+    height: 3rem;
+}
+
+#back #selector img {
+    filter: brightness(50%);
+    transition: filter .35s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+#back #selector h2 {
+    margin: 0;
+
+    background: none;
+    font-size: .9rem;
+    opacity: .5;
+
+    transition: opacity .35s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+
+
+@media only screen and (orientation: portrait) and (max-width: 600px) {
+    #back > div {width: 20em;}
+    #back #selected {padding: 1.5em 2em 3em;}
+    #back #selected > #overflow > *,
+    #selected #process-payment > div > * {
+        width: 16em;
+        padding-right: 2em;
+    }
+
+    #list > div {
+        max-width: unset;
+        border-radius: 1rem;
+    }
+}
+
+@media only screen and (orientation: portrait) {
+    #list > button {justify-content: center;}
+}
+
+
+@media (hover: hover) {
+    #back #selector button {
+        &:hover > h2 {opacity: 1 !important;}
+        &:hover > label img {filter: brightness(100%) !important;}
+    }
+
+    #back #configs #other-configurations input:hover + .slider {background-color: #64b5f6;}
+    #selected #select-payment > .grid-container > * {
+        &:hover > h2 {opacity: 1 !important;}
+        &:hover > label img {filter: brightness(100%) !important;}
+    }
+
+    #select_product #extra > div:hover {background-color: #64b5f6 !important;}
+    select:hover {
+        border-color: #555;
+    }
+
+    #list #quantity > #plus:hover {background-color: #73AF55;}
+    #list #quantity > #minus:hover {background-color: #D06079;}
+}

@@ -1,0 +1,56 @@
+version: '3.8'
+
+services:
+
+  frontend:
+    image: httpd:alpine
+    container_name: pdv_frontend_apache
+    ports:
+      - "80:80"
+    volumes:
+      - ./frontend:/usr/local/apache2/htdocs/
+      - ./logs/apache:/usr/local/apache2/logs/
+    networks:
+      - pdv_network
+    restart: unless-stopped
+
+  backend:
+    image: node:20-alpine
+    container_name: pdv_backend_node
+    working_dir: /app
+    volumes:
+      - ./backend:/app
+      - ./logs/backend:/app/logs
+    command: sh -c "npm install && npm start 2>&1 | tee /app/logs/backend-console.log"
+    ports:
+      - "3000:3000"
+    networks:
+      - pdv_network
+    restart: unless-stopped
+
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    container_name: pdv_cloudflared_tunnel
+    command: tunnel --no-autoupdate --logfile /var/log/cloudflared/tunnel.log run --token ${CLOUDFLARE_TOKEN}
+    environment:
+      - TUNNEL_TOKEN=${CLOUDFLARE_TOKEN}
+    volumes:
+      - ./logs/cloudflared:/var/log/cloudflared
+    networks:
+      - pdv_network
+    restart: unless-stopped
+
+  log_viewer:
+    image: amir20/dozzle:latest
+    container_name: pdv_log_viewer
+    ports:
+      - "8080:8080"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks:
+      - pdv_network
+    restart: unless-stopped
+
+networks:
+  pdv_network:
+    driver: bridge

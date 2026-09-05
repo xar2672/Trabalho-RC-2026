@@ -1,0 +1,482 @@
+body {
+    position: absolute;
+    margin: 0;
+
+    width: 100%;
+    min-height: 100vh;
+
+    box-sizing: border-box;
+}
+
+body > .container {
+    position: relative;
+    height: 100%;
+}
+
+
+h1 {
+    margin: 0;
+    
+    text-align: center;
+    font-size: 2.6em;
+}
+
+p, h2, h3, h4 {
+    overflow: hidden;
+
+    max-width: 70vmin;
+    margin: .8em auto 0;
+    line-height: 1.5em;
+
+    text-align: center;
+    font-size: 1em;
+}
+h3 {font-size: 0.85em;}
+p, h4 {
+    font-size: 0.6em;
+    margin: 0.25vmax auto 0;
+}
+
+
+header {
+    position: relative;
+    align-content: baseline;
+
+    padding: 5em 0 3em;
+    height: auto;
+
+    font-family: 'SamsungFont', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+header > h2 {transition: color 1s cubic-bezier(0.47, 0, 0.745, 0.715);}
+
+.flex-container {
+    display: flex;
+    align-content: center;
+    justify-content: center;
+}
+.grid-container {display: grid;}
+
+footer {
+    position: relative;
+
+    width: 100%;
+    height: max-content;
+
+    font-family: 'SamsungFont', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+
+
+body > #main {padding: 5vmin;}
+
+#receipts #menu {
+    gap: .75em;
+    flex-direction: column;
+
+    padding: 1.5em 2.5em 1.5em 1.5em;
+    border-radius: 3vmin;
+
+    &.selected {
+        background-color: #64b5f6 !important;
+        color: #FFFCF2 !important;
+    }
+    transition: .15s cubic-bezier(0.39, 0.575, 0.565, 1);
+}
+
+
+footer > #configs {
+    align-content: end;
+    justify-content: end;
+    margin-bottom: 1.5em;
+
+    height: 3em;
+    column-gap: 1.5vmax;
+}
+footer > #configs button, #menu button, #send label {
+    position: relative;
+    cursor: pointer;
+    display: inline-block;
+
+    height: auto;
+    aspect-ratio: 1 / 1;
+
+    padding: 0.25vmax;
+    border: none;
+
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    font-size: 1vmin;
+    text-align: center;
+
+    background: none;
+}
+footer > #configs button img, #menu img {height: 100%;}
+
+
+
+
+#receipts {
+    flex-direction: column;
+    row-gap: 2vmax;
+}
+
+label {
+    display: block;
+    color: #64b5f6;
+    &.wrong {animation: wrong_text 1.5s cubic-bezier(0.165, 0.84, 0.44, 1)}
+}
+
+#menu > svg {height: 1.75em;}
+#loader {
+    height: 1em;
+
+    border-top: 1px solid transparent;
+    border-left: 1px solid transparent;
+    border-bottom: 1px solid transparent;
+    border-right: 4px solid rgba(255, 255, 255, 0);
+    border-radius: 50%;
+}
+
+
+#list {
+    overflow: hidden;
+    display: none;
+
+    justify-content: start;
+    align-content: start;
+
+    height: auto;
+
+    grid-template-columns: repeat(auto-fit, minmax(15em, 1fr));
+    gap: 1.25em;
+
+    &.animate {display: grid;}
+}
+
+#list h1 {text-align: left;}
+#list table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+#list th, td {
+    padding: .25em .75em;
+    text-align: left;
+}
+
+#list .img {display: flex;}
+
+#list .img img {
+    height: 1.75rem;
+    font-size: 5vmin;
+}
+
+
+
+#list > button {
+    background: none;
+    cursor: pointer;
+    border: none;
+
+    height: 0;
+    max-width: 27.5em;
+    overflow: hidden;
+
+    transform: translateY(50%);
+    transition: height .25s cubic-bezier(0.25, 0.46, 0.45, 0.94), transform 0.45s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    &.animate {transform: translateY(0%);}
+}
+
+#list > button h1 {
+    margin: 0;
+    font-size: 2em;
+}
+#list > button h2  {
+    background: none; 
+    margin: 1em auto 0;
+
+    &.selected {color: #64b5f6 !important;}
+}
+#list > button h3 {background: none; margin: .35em auto 0;}
+
+
+#list #comment {
+    align-self: flex-end;
+    justify-content: space-between;
+
+    width: 80%;
+    height: max-content;
+}
+
+#list #comment > h3 {margin: 0;}
+#list #comment > p {
+    max-width: 60%;
+    width: fit-content;
+
+    margin: 0;
+    text-align: end;
+    font-size: 0.85em;
+}
+
+
+
+#receipts #error, #receipts #empty {
+    overflow: hidden;
+    display: none;
+
+    height: 0;
+    transform: translateY(50%);
+
+    transition: height 1s cubic-bezier(0.25, 0.46, 0.45, 0.94), transform 0.75s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    &.visible {display: inline-block;}
+    &.animate {transform: translateY(0%);}
+}
+
+#error h2, #empty h2 {
+    margin: 0 auto;
+    font-size: 1.6em;
+}
+
+#error > #sad_face, #empty > #happy_face {margin: 0 auto 1em;}
+
+
+
+#back {
+    position: fixed;
+    overflow: hidden;
+    display: none;
+    z-index: 100;
+
+    width: 100%;
+    
+    background-color: rgba(104, 104, 104, 0);
+    backdrop-filter: blur(0px);
+    -webkit-backdrop-filter: blur(0px);
+
+    transition: all 1s cubic-bezier(0.39, 0.575, 0.565, 1);
+    &.fade_in {
+        background-color: rgba(104, 104, 104, 0.35);
+        backdrop-filter: blur(3px);
+        -webkit-backdrop-filter: blur(3px);
+    }
+}
+
+#back > div {
+    z-index: 100;
+    position: absolute;
+    display: inline-flex;
+
+    row-gap: 2.5vmax;
+    flex-direction: column-reverse;
+    
+    left: 0;
+    right: 0;
+    bottom: 0;
+    margin: 0 auto;
+
+    width: 35em;
+    padding: 3em 1em;
+
+    font-family: 'SamsungFont', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+#back > div h2 {
+    margin: 0 auto;
+    max-width: 60vmin;
+    
+    font-weight: bolder;
+    font-size: 2.5em;
+}
+#back > div h3 {
+    margin: 0 auto 1.5em;
+    max-width: 60vmin;
+    font-size: 1em;
+}
+
+
+#back > div > * {
+    position: relative;
+    justify-content: start;
+    scroll-snap-type: x mandatory;
+
+    overflow-x: hidden;
+    scroll-behavior: smooth;
+    scrollbar-color: #64b5f6 #69696b;
+
+    padding: 1.5em;
+    border-radius: 3vmin;
+
+    transition: transform 1s cubic-bezier(0.165, 0.84, 0.44, 1);
+    &.animate {transform: translateY(0%) !important;}
+}
+#back > div button {
+    position: relative;
+    cursor: pointer;
+    display: inline-block;
+
+    height: auto;
+    aspect-ratio: 1 / 1;
+
+    padding: 0.25vmax;
+    border: none;
+
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    font-size: 1vmin;
+    text-align: center;
+
+    background: none;
+}
+#back > div button img {height: 100%;}
+#back #overflow {
+    height: 100%;
+    width: max-content;
+}
+
+#back #selected {
+    max-height: 21.5em;
+    padding: 1.5em 3em 3em;
+    transform: translateY(-100%) translateY(1500px);
+}
+#back #selected > #overflow > * {
+    background: none;
+    padding-right: 3em;
+    flex-direction: column;
+    scroll-snap-align: end;
+
+    height: min-content;
+    width: 29em;
+}
+#back #selected div[class="grid-container"] {row-gap: 1.5em;}
+
+
+#back #left {justify-content: end;}
+#back #left #submit {
+    position: relative;
+    border: none;
+    cursor: pointer;
+
+    padding: 0.75em 3vmax;
+    border-radius: 2em;
+
+    font-size: 1em;
+
+    color: white;
+    background-color: #64b5f6;
+    &.wrong {animation: wrong_button 1.5s cubic-bezier(0.165, 0.84, 0.44, 1)}
+}
+
+#back input[type="text"], #back input[type="password"] {
+    appearance: textfield;
+
+    padding: 0 0.5vmin 0.5vmin 0;
+    border-radius: 0.25em;
+    width: 87.5%;
+    margin: 0;
+
+    border-top: none;
+    border-left: none;
+    border-right: none;
+
+    font-size: 1em;
+    background: none;
+    transition: border-color .15s, caret-color .15s;
+    &.wrong {animation: wrong_text 1.5s cubic-bezier(0.165, 0.84, 0.44, 1)}
+}
+#back input[type="text"]:focus, #back input[type="password"]:focus {
+    outline: none;
+    caret-color: #64b5f6;
+    border-color: #64b5f6;
+}
+
+
+#back #status-account > #happy_face {
+    margin-left: auto;
+    margin-right: auto;
+}
+
+#back #status-account > #infos {
+    gap: 0.5vmax;
+    grid-template-columns: 75% auto;
+    margin-top: 2vmax;
+}
+
+#back #status-account > #infos p,
+#back #status-account > #infos h4,
+#back #status-account > #infos h3 {
+    margin: 0;
+    max-width: none;
+    text-align: right;
+}
+#back #status-account > #infos p {
+    text-align: left;
+    word-wrap: break-word;
+}
+
+
+#back #selector {
+    overflow-x: scroll;
+    transform: translateY(100%) translateY(-1500px);
+}
+#back #selector > #overflow > * {
+    scroll-snap-align: end;
+    background: none;
+
+    margin-right: 3em;
+    width: 10rem;
+    
+}
+#back #selector button {
+    display: inline-grid;
+    aspect-ratio: unset;
+    cursor: pointer;
+
+    min-width: 25em;
+    row-gap: 1.5em;
+    & > .selected {opacity: 1 !important;}
+    & > label img[class="selected"] {filter: brightness(100%) !important;}
+}
+#back #selector label {
+    cursor: pointer;
+    height: 3rem;
+}
+
+#back #selector img {
+    filter: brightness(50%);
+    transition: filter .35s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+#back #selector h2 {
+    margin: 0;
+
+    background: none;
+    font-size: .9rem;
+    opacity: .5;
+
+    transition: opacity .35s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+
+
+@media only screen and (orientation: portrait) and (max-width: 600px) {
+    #back > div {width: 20em;}
+    #back #selected {padding: 1.5em 2em 3em;}
+    #back #selected > #overflow > * {
+        width: 16em;
+        padding-right: 2em;
+    }
+
+    #list > div {
+        max-width: unset;
+        border-radius: 1rem;
+    }
+}
+
+@media only screen and (orientation: portrait) {
+    #list > button {justify-content: center;}
+}
+
+
+@media (hover: hover) {
+    #back #selector button {
+        &:hover > h2 {opacity: 1 !important;}
+        &:hover > label img {filter: brightness(100%) !important;}
+    }
+}

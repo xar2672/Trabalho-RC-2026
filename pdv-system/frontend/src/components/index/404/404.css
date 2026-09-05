@@ -1,0 +1,106 @@
+body {
+    overflow: hidden;
+
+    margin: 0;
+    width: 100%;
+    height: 100vh;
+    box-sizing: border-box;
+
+    background: rgb(12,12,26);
+    background: -moz-radial-gradient(circle, rgba(12,12,26,1) 65%, rgba(8,8,12,1) 100%);
+    background: -webkit-radial-gradient(circle, rgba(12,12,26,1) 65%, rgba(8,8,12,1) 100%);
+    background: radial-gradient(circle, rgba(12,12,26,1) 65%, rgba(8,8,12,1) 100%);
+    filter: progid:DXImageTransform.Microsoft.gradient(startColorstr="#0c0c1a",endColorstr="#08080c",GradientType=1); 
+}
+
+img {
+    height: 100%;
+    line-height: 100vh;
+
+    aspect-ratio: 0 / 1;
+
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    font-size: 6vmin;
+    text-align: center;
+
+    color: #FFFCF2;
+}
+
+
+#backbox {
+    position: absolute;
+    z-index: 2;
+
+    top: 0;
+    height: 96%;
+    width: 96%;
+
+    padding: 2%;
+
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+}
+
+#backbox .container {
+    position: relative;
+
+    margin-left: auto;
+    margin-right: auto;
+
+    width: fit-content;
+    height: 38vmax;
+}
+
+#backbox a {
+    aspect-ratio: 1 / 1;
+}
+
+
+#background {
+    position: absolute;
+
+    width: 100%;
+    height: 100%;
+}
+
+#background > #Omor {
+    position: absolute;
+    display: block;
+
+    top: 2.5vmin;
+    height: 20%;
+}
+
+#background > #Romo {
+    position: absolute;
+    display: block;
+
+    top: 5vmin;
+    height: 17.5%;
+}
+
+#background > #DOOR {
+    position: absolute;
+    display: block;
+
+    top: 5vmin;
+    height: 20%;
+
+    opacity: 0.5;
+}
+
+#background > #door {
+    position: absolute;
+    display: block;
+
+    height: 35%;
+    opacity: 0.25;
+}
+
+#background > #amongus {
+    position: absolute;
+    display: block;
+
+    top: 15vmin;
+    height: 12%;
+}
