@@ -9,6 +9,7 @@ pnpm-debug.log*
 # Ignore these files anywhere in the project
 **/Credentials.json
 **/tokens.json
+fonts/
 
 # Databases (Offline PDV Data)
 *.sqlite
