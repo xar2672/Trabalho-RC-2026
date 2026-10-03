@@ -19,9 +19,8 @@ services:
     container_name: pdv_backend_node
     working_dir: /app
     volumes:
-      - ./backend:/app
-      - ./logs/backend:/app/logs
-    command: sh -c "npm install && npm start 2>&1 | tee /app/logs/backend-console.log"
+      - ./backend:/app.
+    command: sh -c "npm install && npm start"
     ports:
       - "3000:3000"
     networks:
@@ -31,14 +30,15 @@ services:
   cloudflared:
     image: cloudflare/cloudflared:latest
     container_name: pdv_cloudflared_tunnel
-    command: tunnel --no-autoupdate --logfile /var/log/cloudflared/tunnel.log run --token ${CLOUDFLARE_TOKEN}
+    command: tunnel --no-autoupdate run
     environment:
       - TUNNEL_TOKEN=${CLOUDFLARE_TOKEN}
-    volumes:
-      - ./logs/cloudflared:/var/log/cloudflared
     networks:
       - pdv_network
     restart: unless-stopped
+    depends_on:
+      - frontend
+      - backend
 
   log_viewer:
     image: amir20/dozzle:latest
