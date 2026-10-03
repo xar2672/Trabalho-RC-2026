@@ -133,10 +133,17 @@ export const TEST_PRICE_MODE = [false];
 export const TAB_SIZE = 4; // Tamanho da Comanda
 export const RECURSION_TRIALS = 3;
 
+export const getURL = () => {
+    const IS_LOCAL = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1";
+    return IS_LOCAL
+        ? "http://localhost:85/Private"
+        : "https://usp.perimin.com.br/Private"
+    ;
+}
 
 
 async function acessBACK(params) {
-    const URL = `https://usp.perimin.com.br/Private`;
+    const URL = getURL();
     const method = params["method"];
     var response;
 
