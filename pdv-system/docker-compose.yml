@@ -1,15 +1,16 @@
 version: '3.8'
 
 services:
-
   frontend:
     image: httpd:alpine
     container_name: pdv_frontend_apache
     ports:
-      - "80:80"
+      - "85:80"
     volumes:
-      - ./frontend:/usr/local/apache2/htdocs/
+      - ./www/frontend:/usr/local/apache2/htdocs/
       - ./logs/apache:/usr/local/apache2/logs/
+      - ./httpd.conf:/usr/local/apache2/conf/httpd.conf
+      - ./rules:/usr/local/apache2/conf/minhas-regras
     networks:
       - pdv_network
     restart: unless-stopped
@@ -19,10 +20,10 @@ services:
     container_name: pdv_backend_node
     working_dir: /app
     volumes:
-      - ./backend:/app.
+      - ./www/backend:/app
     command: sh -c "npm install && npm start"
     ports:
-      - "3000:3000"
+      - "3005:3000"
     networks:
       - pdv_network
     restart: unless-stopped
@@ -31,8 +32,8 @@ services:
     image: cloudflare/cloudflared:latest
     container_name: pdv_cloudflared_tunnel
     command: tunnel --no-autoupdate run
-    environment:
-      - TUNNEL_TOKEN=${CLOUDFLARE_TOKEN}
+    env_file:
+      - .env
     networks:
       - pdv_network
     restart: unless-stopped
@@ -44,7 +45,7 @@ services:
     image: amir20/dozzle:latest
     container_name: pdv_log_viewer
     ports:
-      - "8080:8080"
+      - "8085:8080"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
     networks:
