@@ -18,9 +18,9 @@ services:
   backend:
     image: node:20-alpine
     container_name: pdv_backend_node
-    working_dir: /app
+    working_dir: /web
     volumes:
-      - ./www/backend:/app
+      - ./www/backend/src/infrastructure/web/:/web
     command: sh -c "npm install && npm start"
     ports:
       - "3005:3000"
