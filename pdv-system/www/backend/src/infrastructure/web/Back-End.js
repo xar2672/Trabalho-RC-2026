@@ -7,9 +7,11 @@ import FETCH from "node-fetch";
 import EXPRESS from "express";
 import HTTPS from "https";
 import CORS from "cors";
-
+import db from "./db.js";
 import DOTNEV from "dotenv";
-DOTNEV.configDotenv({path: "/home/grasnik/Desktop/Caixa/Private/.env"});
+// DOTNEV.configDotenv({path: "/home/grasnik/Desktop/Caixa/Private/.env"});
+DOTNEV.configDotenv();
+const MOCK_MODE = process.env.MOCK_MODE === "true";
 
 import OAuth2Server from "@node-oauth/oauth2-server";
 import cookieParser from "cookie-parser";
@@ -25,7 +27,7 @@ import process from "process";
 import {google} from 'googleapis';
 import destroyer from "server-destroy";
 
-const origins = ["https://scripts.google.com/", "https://sheets.googleapis.com/", "https://apis.google.com/", "https://accounts.google.com/", "https://usp.perimin.com.br", "https://127.0.0.1:443", "https://localhost", "https://mercadopago.com.ar"];
+const origins = ["https://scripts.google.com/", "https://sheets.googleapis.com/", "https://apis.google.com/", "https://accounts.google.com/", "https://www.perimin.com.br", "https://127.0.0.1:443", "https://localhost", "https://mercadopago.com.ar", "http://localhost:5500"];
 const corsOptions = {
     origin: function(origin, callback) {
         let corsOptions;
@@ -47,7 +49,8 @@ const corsOptions = {
 
 const corsMiddleware = CORS(corsOptions);
 const APPLICATION = EXPRESS();
-const PORT = 8080;
+// const PORT = 8080;
+const PORT =  process.env.PORT || 8080;
 
 var PAYMENT_WEBHOOKERS = {};
 var CLIENTS = [];
@@ -59,13 +62,19 @@ APPLICATION.use(BODY_PARSER.urlencoded({ extended: true }));
 
 
 
-const PRIVATE_KEY = fs.readFileSync("/srv/http_certificates/feira/certificate.key", "utf8");
-const CERTIFICATE = fs.readFileSync("/srv/http_certificates/feira/cert.pem", "utf8");
+// const PRIVATE_KEY = fs.readFileSync("/srv/http_certificates/feira/certificate.key", "utf8");
+// const CERTIFICATE = fs.readFileSync("/srv/http_certificates/feira/cert.pem", "utf8");
+const PRIVATE_KEY = fs.readFileSync("./certs/key.pem", "utf8");
+const CERTIFICATE = fs.readFileSync("./certs/cert.pem", "utf8");
+
 const CRED = {key: PRIVATE_KEY, cert: CERTIFICATE};
 
 const CREDENTIALS_PATH = path.join(process.cwd(), '/Desktop/Caixa/Private/Credentials.json');
 const TOKENS_PATH = path.join(process.cwd(), '/Desktop/Caixa/Private/tokens.json');
-const CREDENTIALS = JSON.parse(fs.readFileSync(CREDENTIALS_PATH, "utf8"));
+// const CREDENTIALS = JSON.parse(fs.readFileSync(CREDENTIALS_PATH, "utf8"));
+const CREDENTIALS = MOCK_MODE
+    ? {client_id: "mock", client_secret: "mock", redirect_uris: ["https://localhost:3000/oauth2callback"]}
+    : JSON.parse(fs.readFileSync(CREDENTIALS_PATH, "utf8"));
 
 const SCOPES = ["https://www.googleapis.com/auth/spreadsheets"];
 const jsonParser = BODY_PARSER.json();
@@ -84,7 +93,10 @@ const readToken = async () => {
         throw new Error(":( => No Token");
     }
 }
+
+// metodo de autenticacao da planilha 
 const getAuthenticatedClient = async () => {
+      if (MOCK_MODE) {return "MOCK_AUTH";}  
     var oAuth2Client = new google.auth.OAuth2(CREDENTIALS.client_id, CREDENTIALS.client_secret, CREDENTIALS.redirect_uris[0]);
     return await new Promise(async (resolve, reject) => {
         const saved_token = (await readToken())["sheets_apis"];
@@ -243,6 +255,7 @@ const SPREADSHEETID = process.env.SPREADSHEETID;
 const API_KEY = process.env.API_KEY;
 
 async function acessSheet(auth, sheet, interval) {
+      if (MOCK_MODE) {return {values: []};}  
     const sheets = google.sheets({version: "v4", auth: auth});
     let response;
     try {
@@ -251,7 +264,7 @@ async function acessSheet(auth, sheet, interval) {
             range: (`${sheet}!${interval}`), // Aqui vem as planilhas ([Nome dela]! + Intervalo)
             key: API_KEY,
             headers: {
-                referer: "https://usp.perimin.com.br",
+                referer: "https://www.perimin.com.br",
             }
         });
     } 
@@ -276,6 +289,65 @@ const getRecentHour = () => new Date().toLocaleString("pt-BR", {
     minute: "2-digit",
     second: "2-digit"
 });
+
+class UserError extends Error {}   // erros "esperados": estoque, produto inexistente...
+
+const findVariant = db.prepare(`
+    SELECT v.id, v.price, v.stock_qty AS stock, v.product_id AS productId
+    FROM product_variants v JOIN products p ON p.id = v.product_id
+    WHERE p.name = ? AND v.type_name = ?`);
+const findExtra  = db.prepare("SELECT price FROM product_extras WHERE product_id = ? AND name = ?");
+const takeStock  = db.prepare("UPDATE product_variants SET stock_qty = stock_qty - ? WHERE id = ? AND stock_qty >= ?");
+const idTaken    = db.prepare("SELECT 1 FROM sales WHERE external_id = ?");
+const tabTaken   = db.prepare("SELECT 1 FROM sales WHERE tab_number = ?");
+const insertSale = db.prepare("INSERT INTO sales (tab_number, buyer_name, external_id, total, comment) VALUES (?, ?, ?, ?, ?)");
+const insertItem = db.prepare("INSERT INTO sale_items (sale_id, variant_id, quantity, unit_price, extras) VALUES (?, ?, ?, ?, ?)");
+
+// Método responsavel por ler as informações do banco, e calcular os valores (racional de pricing)
+function priceItems(products) {
+    return products.map(p => {
+        const v = findVariant.get(p.produto, p.tipo);
+        if (!v) throw new UserError(`Produto não encontrado: ${p.produto} / ${p.tipo}`);
+
+        const qty = Number(p.quantidade);
+        if (!Number.isInteger(qty) || qty <= 0) throw new UserError(`Quantidade inválida: ${p.produto}`);
+        if (qty > v.stock) throw new UserError(`Estoque insuficiente: ${p.produto} / ${p.tipo}`);
+
+        const extras = Object.keys(p.extras ?? {}).filter(k => p.extras[k] === true);
+        const extrasPrice = extras.reduce((sum, name) => {
+            const e = findExtra.get(v.productId, name);
+            if (!e) throw new UserError(`Extra não encontrado: ${p.produto} / ${name}`);
+            return sum + e.price;
+        }, 0);
+
+        return {variantId: v.id, qty, unit: v.price + extrasPrice, extras};
+    });
+}
+
+// Transaction para dar rollback em caso de erro na hora de inserir a venda
+const createSale = db.transaction((buyer, comment, products) => {
+    const items = priceItems(products);
+
+    let externalId, tabNumber;
+    do { externalId = generateTAB(); } while (idTaken.get(externalId));
+    do { tabNumber  = generateTAB(); } while (tabTaken.get(tabNumber));
+
+    let total = 0;
+    for (const it of items) {
+        // check de restrições
+        if (takeStock.run(it.qty, it.variantId, it.qty).changes === 0)
+            throw new UserError("Estoque insuficiente");
+        total += it.unit * it.qty;
+    }
+
+    const saleId = insertSale.run(tabNumber, buyer, externalId, total, comment).lastInsertRowid;
+    items.forEach(it => insertItem.run(saleId, it.variantId, it.qty, it.unit,
+                                       it.extras.length ? JSON.stringify(it.extras) : null));
+    return {externalId, tabNumber, total};
+});
+
+// METODO ANTIGO - PLANILHA (VERFICAR AQUI DEPOS)
+/*
 async function changeSheet(auth, changeType, infos) {
     const sheets = google.sheets({version: "v4", auth: auth});
     let response;
@@ -287,9 +359,11 @@ async function changeSheet(auth, changeType, infos) {
                     range: (`Avaliações!C7:C`), // Aqui vem as planilhas ([Nome dela]! + Intervalo)
                     key: API_KEY,
                     headers: {
-                        referer: "https://usp.perimin.com.br",
+                        referer: "https://www.perimin.com.br",
                     }
                 });
+
+                
                 if (infos.ID && infos.estrelas && infos.comentario &&
                     responsive_lastROW.data && responsive_lastROW.data.values) {
                     const AVALIACOES = responsive_lastROW.data.values;
@@ -316,7 +390,7 @@ async function changeSheet(auth, changeType, infos) {
                         valueInputOption: "USER_ENTERED",
 
                         headers: {
-                            referer: "https://usp.perimin.com.br",
+                            referer: "https://www.perimin.com.br",
                         },
                         requestBody: {
                             values: [setValue]
@@ -330,7 +404,7 @@ async function changeSheet(auth, changeType, infos) {
                     range: (`Vendas!B7:C`), // Aqui vem as planilhas ([Nome dela]! + Intervalo)
                     key: API_KEY,
                     headers: {
-                        referer: "https://usp.perimin.com.br",
+                        referer: "https://www.perimin.com.br",
                     }
                 });
                 const PRODUCTS = await sheets.spreadsheets.values.get({
@@ -338,20 +412,20 @@ async function changeSheet(auth, changeType, infos) {
                     range: (`Status!G12:M`), // Aqui vem as planilhas ([Nome dela]! + Intervalo)
                     key: API_KEY,
                     headers: {
-                        referer: "https://usp.perimin.com.br",
+                        referer: "https://www.perimin.com.br",
                     }
                 }); 
-                /**
-                 * infos tem que ter:
-                 * => infos.buyer
-                 * => infos.comment
-                 * => ARRAY QUE ENGLOBA (infos.produtos_comprados):
-                 *  -> infos.extras
-                 *  -> infos.produto
-                 *  -> infos.quantidade
-                 *  -> infos.tipo
-                 * 
-                */
+                
+                //  * infos tem que ter:
+                //  * => infos.buyer
+                //  * => infos.comment
+                //  * => ARRAY QUE ENGLOBA (infos.produtos_comprados):
+                //  *  -> infos.extras
+                //  *  -> infos.produto
+                //  *  -> infos.quantidade
+                //  *  -> infos.tipo
+                //  * 
+               
 
                 if (PRODUCTS.data && PRODUCTS.data.values &&
                     infos.buyer && infos.products && 
@@ -450,7 +524,7 @@ async function changeSheet(auth, changeType, infos) {
                         key: API_KEY,
                         valueInputOption: "USER_ENTERED",
 
-                        headers: {referer: "https://usp.perimin.com.br"},
+                        headers: {referer: "https://www.perimin.com.br"},
                         requestBody: {
                             values: productQuantity
                         }
@@ -462,7 +536,7 @@ async function changeSheet(auth, changeType, infos) {
                         key: API_KEY,
                         valueInputOption: "USER_ENTERED",
 
-                        headers: {referer: "https://usp.perimin.com.br"},
+                        headers: {referer: "https://www.perimin.com.br"},
                         requestBody: {
                             values: [setValue]
                         }
@@ -475,14 +549,14 @@ async function changeSheet(auth, changeType, infos) {
                     range: (`Vendas!D7:D`), // Aqui vem as planilhas ([Nome dela]! + Intervalo)
                     key: API_KEY,
                     headers: {
-                        referer: "https://usp.perimin.com.br",
+                        referer: "https://www.perimin.com.br",
                     }
                 });
-                /**
-                 * 
-                 * infos tem que ter:
-                 * => infos.comanda
-                */
+                
+                //  * 
+                //  * infos tem que ter:
+                //  * => infos.comanda
+                
                 
                 if (infos.comanda &&
                     purchaseLIST.data && purchaseLIST.data.values) {
@@ -498,7 +572,7 @@ async function changeSheet(auth, changeType, infos) {
                             key: API_KEY,
                             valueInputOption: "USER_ENTERED",
 
-                            headers: {referer: "https://usp.perimin.com.br"},
+                            headers: {referer: "https://www.perimin.com.br"},
                             requestBody: {
                                 values: [[true]]
                             }
@@ -514,6 +588,7 @@ async function changeSheet(auth, changeType, infos) {
         return false;
     }
 }
+*/
 
 
 
@@ -541,23 +616,130 @@ APPLICATION.post("/", corsMiddleware, jsonParser, async (req, res) => {
                 creation_date: user_infos["date"]
             });
             return;
-        case "getSheet":
-            const name = content.name;
-            const address = content.address;
-            getAuthenticatedClient().then(auth => {
-                acessSheet(auth, name, address).then(msg => res.send(msg));
-            }).catch(error => console.error(error));
-            return;
-        case "changeSheet":
-            getAuthenticatedClient().then((auth) => {
-                changeSheet(auth, content.type, content.data).then(msg => res.send(msg))
-            }).catch(error => console.error(error));
-            return;
 
+    // API para recuperar o total da vendas
+    case "getRevenue": {
+         const row = db.prepare("SELECT COALESCE(SUM(total), 0) AS total FROM sales").get();
+         res.status(200).json({total: row.total});
+    return;
+    }
+
+    // API para recuperar as avaliações da base
+    case "getReviews": {
+    const reviews = db.prepare(`
+        SELECT s.external_id   AS saleExternalId, r.reviewer_name AS reviewer, r.stars AS stars, r.comment AS comment
+        FROM reviews r
+        JOIN sales s ON s.id = r.sale_id
+        ORDER BY r.created_at
+    `).all();
+
+    res.status(200).json(reviews);
+    return;
+    }
+
+
+    // API para recuperar os produtos
+    case "getProducts": {
+        
+    // obtem as informação de produto das tabelas
+    const products = db.prepare("SELECT id, name FROM products ORDER BY id").all();
+    const variants = db.prepare(`SELECT product_id, type_name AS type, price, stock_qty AS stock FROM product_variants ORDER BY id`).all();
+    const extras = db.prepare(`SELECT product_id, name, price FROM product_extras ORDER BY id`).all();
+
+    // retorna um consolidado com as todas as infos de produtos que estão disponiveis nas tabelas de produtos e suas especializações
+    const result = products.map(p => ({
+        name: p.name,
+        variants: variants.filter(v => v.product_id === p.id).map(({type, price, stock}) => ({type, price, stock})),
+        extras: extras.filter(e => e.product_id === p.id).map(({name, price}) => ({name, price}))
+    }));
+
+    res.status(200).json(result);
+    return;
+}
+    // API para recuperar as vendas 
+    case "getSales": 
+    
+        const sales = db.prepare(`
+            SELECT id, tab_number AS tabNumber,
+                buyer_name        AS buyer,
+                external_id       AS externalId,
+                total,
+                COALESCE(comment,'') AS comment,
+                delivered FROM sales ORDER BY id`).all();
+
+        const items = db.prepare(`
+            SELECT si.sale_id AS saleId,
+                p.name           AS product,
+                v.type_name      AS type,
+                si.quantity      AS quantity,
+                si.unit_price    AS unitPrice,
+                si.extras        AS extras,
+                time(si.sold_at) AS time
+            FROM sale_items si
+            JOIN product_variants v ON v.id = si.variant_id
+            JOIN products p         ON p.id = v.product_id
+            ORDER BY si.id`).all();
+
+        const result = sales.map(s => ({
+            tabNumber:  s.tabNumber,
+            buyer:      s.buyer,
+            externalId: s.externalId,
+            total:      s.total,
+            comment:    s.comment,
+            delivered:  s.delivered === 1,
+            items: items.filter(i => i.saleId === s.id)
+                .map(({saleId, extras, ...rest}) => ({
+                    ...rest,extras: extras ? JSON.parse(extras) : [] }))
+        }));
+
+        res.status(200).json(result);
+        return;
+
+    // APIS PARA INSERÇAO NA BASE
+
+        case "addPurchase": {
+        const {buyer, comment, products} = content.data ?? {};
+        if (!buyer || !Array.isArray(products) || products.length === 0) {
+            res.status(400).json({ok: false, error: "Dados inválidos"});
+            return;
+        }
+        try { // chama o metodo de inserção (implementado mais acima com tratamentos transacionais)
+            res.status(200).json({ok: true, ...createSale(buyer, comment ?? "", products)});
+        } catch (e) {
+            const expected = e instanceof UserError;
+            if (!expected) console.error(e);
+            res.status(expected ? 409 : 500).json({ok: false, error: expected ? e.message : "Erro interno"});
+        }
+        return;
+    }
+
+    case "deliverSale": {
+        const tab = String(content.data?.comanda ?? "").replace(/\D/g, ""); // aceita "#1001" ou "1001"
+        // comando sql para alterar o estado da venda
+        const r = db.prepare("UPDATE sales SET delivered = 1 WHERE tab_number = ?").run(tab);
+        res.status(200).json({ok: r.changes > 0});
+        return;
+    }
+
+    case "addReview": {
+        const {ID, name, estrelas, comentario} = content.data ?? {};
+        // obtem o id da venda para atrelar os registros das tabelas
+        const sale = db.prepare("SELECT id FROM sales WHERE external_id = ?").get(String(ID ?? ""));
+        const stars = Number(estrelas);
+        if (!sale || !Number.isInteger(stars) || stars < 1 || stars > 5) {
+            res.status(200).json({ok: false});
+            return;
+        }
+        // inserção da avaliação na base
+        db.prepare("INSERT INTO reviews (sale_id, reviewer_name, stars, comment) VALUES (?, ?, ?, ?)")
+        .run(sale.id, name ?? "", stars, comentario || null);
+        res.status(200).json({ok: true});
+        return;
+    }
         case "payMaquininha":
             console.log("no")
             return;
-        case "payPIX":
+                case "payPIX": {
             /**
                 * ADICIONAR ISSO PARA O FRONT-END 
                 * infos tem que ter:
@@ -565,147 +747,156 @@ APPLICATION.post("/", corsMiddleware, jsonParser, async (req, res) => {
                 * => infos.products
                 * 
             */
-            getAuthenticatedClient().then(async auth => {
-                const sheets = google.sheets({version: "v4", auth: auth});
-                const PRODUCTS = await sheets.spreadsheets.values.get({
-                    spreadsheetId: SPREADSHEETID,
-                    range: (`Status!G12:M`), // Aqui vem as planilhas ([Nome dela]! + Intervalo)
-                    key: API_KEY,
-                    headers: {
-                        referer: "https://usp.perimin.com.br",
-                    }
-                });
 
-                if (PRODUCTS.data && PRODUCTS.data.values
-                    && content.test_mode !== undefined && content.products 
-                ) {
-                    const USER_ID = process.env.USER_ID;
-                    const EXTERNAL_POS_ID = "FSK001POS01";
-                    const URL = `https://api.mercadopago.com/instore/orders/qr/seller/collectors/${USER_ID}/pos/${EXTERNAL_POS_ID}/qrs`;
+            if (content.test_mode !== undefined && content.products) {
+                const USER_ID = process.env.USER_ID;
+                const EXTERNAL_POS_ID = "FSK001POS01";
+                const URL = `https://api.mercadopago.com/instore/orders/qr/seller/collectors/${USER_ID}/pos/${EXTERNAL_POS_ID}/qrs`;
 
-                    let products_selected = [], total_price = 0;
-                    if (!content.test_mode) {
-                        const list_Products = {};
-                        PRODUCTS.data.values.forEach(linha_Produto => {
-                            const nome = linha_Produto[0];
-                            const lista_tipos = JSON.parse(linha_Produto[3]);
-                            const lista_precos = JSON.parse(linha_Produto[4]);
-                            const lista_extras = linha_Produto[5] !== "" ? JSON.parse(JSON.parse(linha_Produto[5])) : {};
+                let products_selected = [], total_price = 0;
+                if (!content.test_mode) {
+                    // preços e estoque agora vêm do SQLite, no mesmo formato que a planilha produzia: { nome: { tipo: { quant_restante, valor, extras: { nomeDoExtra: preço } } } }
+                    const list_Products = {};
+                    const variantRows = db.prepare(`
+                        SELECT p.id AS productId, p.name AS nome, v.type_name AS tipo,
+                               v.price AS valor, v.stock_qty AS quant_restante
+                        FROM products p JOIN product_variants v ON v.product_id = p.id
+                        ORDER BY p.id, v.id`).all();
+                    const extraRows = db.prepare(
+                        "SELECT product_id AS productId, name, price FROM product_extras").all();
 
-                            const inside = {};
-                            const lista_quant = JSON.parse(linha_Produto[6]);
-                            lista_tipos.forEach(tipo => {
-                                const index = lista_tipos.indexOf(tipo);
-                                inside[tipo] = {
-                                    quant_restante: lista_quant[index],
-                                    valor: lista_precos[index],
-                                    extras: lista_extras
+                    const extrasByProduct = {};
+                    extraRows.forEach(e => {
+                        (extrasByProduct[e.productId] ??= {})[e.name] = e.price;
+                    });
+                    variantRows.forEach(r => {
+                        (list_Products[r.nome] ??= {})[r.tipo] = {
+                            quant_restante: r.quant_restante,
+                            valor: r.valor,
+                            extras: extrasByProduct[r.productId] ?? {}
+                        };
+                    });
+
+                    content.products.forEach(produto => {
+                        const quantity = produto["quantidade"];
+                        const infos_product = list_Products[produto["produto"]] ? list_Products[produto["produto"]][produto["tipo"]] : 0;
+                        if (infos_product["quant_restante"] > 0 && quantity > 0) {
+                            const extra_product = produto["extras"];
+                            let inner_price = 0;
+                            let extras = {};
+
+                            if (extra_product) {
+                                extras = Object.keys(extra_product).filter(key => extra_product[key] === true);
+                                if (Object.keys(extras).length > 0) {
+                                    extras.forEach(extra => 
+                                        inner_price += infos_product["extras"][extra]
+                                    );
                                 }
+                            }
+                            
+                            const price = infos_product["valor"];
+                            inner_price += price;
+                            inner_price *= quantity;
+
+                            products_selected.push({
+                                "category": "marketplace",
+                                "title": "QR Code",
+                                "description": `${produto["produto"]}   ${produto["tipo"]}`,
+
+                                "unit_price": price,
+                                "unit_measure": "unit",
+                                "quantity": quantity,
+
+                                "total_amount": inner_price
                             });
 
-                            list_Products[nome] = inside;
-                        });
-
-                        content.products.forEach(produto => {
-                            const quantity = produto["quantidade"];
-                            const infos_product = list_Products[produto["produto"]] ? list_Products[produto["produto"]][produto["tipo"]] : 0;
-                            if (infos_product["quant_restante"] > 0 && quantity > 0) {
-                                const extra_product = produto["extras"];
-                                let inner_price = 0;
-                                let extras = {};
-
-                                if (extra_product) {
-                                    extras = Object.keys(extra_product).filter(key => extra_product[key] === true);
-                                    if (Object.keys(extras).length > 0) {
-                                        extras.forEach(extra => 
-                                            inner_price += infos_product["extras"][extra]
-                                        );
-                                    }
-                                }
-                                
-                                const price = infos_product["valor"];
-                                inner_price += price;
-                                inner_price *= quantity;
-
-                                products_selected.push({
-                                    "category": "marketplace",
-                                    "title": "QR Code",
-                                    "description": `${produto["produto"]}   ${produto["tipo"]}`,
-            
-                                    "unit_price": price,
-                                    "unit_measure": "unit",
-                                    "quantity": quantity,
-            
-                                    "total_amount": inner_price
-                                });
-
-                                total_price += inner_price;
-                            }
-                        });
-                    } else {
-                        products_selected.push({
-                            "category": "marketplace",
-                            "title": "QR Code",
-                            "description": `${"TESTE_NOME"}   ${"TESTE_TIPO"}`,
-
-                            "unit_price": 0.01,
-                            "unit_measure": "unit",
-                            "quantity": 2,
-
-                            "total_amount": 0.01
-                        });
-                        total_price = 0.01;
-                    }
-                    
-                    const nowDATE = new Date();
-                    const identifier = nowDATE.toLocaleTimeString("pt-Br", {hour: '2-digit', minute:'2-digit', second:'2-digit'});
-                    nowDATE.setMinutes(nowDATE.getMinutes() + 15);
-
-                    const external_reference = `Compra_${identifier}`;
-                    options = {
-                        "external_reference": external_reference,
-                        "title": `Comanda ${identifier}`,
-                        "description": "Compra realizada pelo MERCADO_PAGO_QR_CODE",
-
-                        "expiration_date": nowDATE,
-
-                        "total_amount": total_price,
-                        "items": products_selected,
-                    };
-                    
-                    try {
-                        const result = await (await FETCH(URL, {
-                            method: "POST",
-                            headers: {
-                                'Content-Type': 'application/json',
-                                'Origin': 'https://usp.perimin.com.br',
-
-                                'Authorization': `Bearer ${process.env.ACCESS_TOKEN}`
-                            },
-                            body: JSON.stringify(options)
-                        })).json();
-                        console.log(result)
-
-                        qrCode.toDataURL(result.qr_data, {errorCorrectionLevel: "H", margin: 2}, (Error, URL) => {
-                            if (Error) {
-                                res.sendStatus(200);
-                                console.error(Error);
-                            } else {
-                                res.send(JSON.stringify({'QR_BASE-64': URL, 'external_reference': external_reference}));
-                                console.log("QR Code Generated!");
-                            }
-                        });
-                        
-                    }
-                    catch (error) {
-                        console.error(error);
-                        res.sendStatus(500);
-                    }
+                            total_price += inner_price;
+                        }
+                    });
                 } else {
+                    products_selected.push({
+                        "category": "marketplace",
+                        "title": "QR Code",
+                        "description": `${"TESTE_NOME"}   ${"TESTE_TIPO"}`,
+
+                        "unit_price": 0.01,
+                        "unit_measure": "unit",
+                        "quantity": 2,
+
+                        "total_amount": 0.01
+                    });
+                    total_price = 0.01;
+                }
+                
+                const nowDATE = new Date();
+                const identifier = nowDATE.toLocaleTimeString("pt-Br", {hour: '2-digit', minute:'2-digit', second:'2-digit'});
+                nowDATE.setMinutes(nowDATE.getMinutes() + 15);
+
+                const external_reference = `Compra_${identifier}`;
+                options = {
+                    "external_reference": external_reference,
+                    "title": `Comanda ${identifier}`,
+                    "description": "Compra realizada pelo MERCADO_PAGO_QR_CODE",
+
+                    "expiration_date": nowDATE,
+
+                    "total_amount": total_price,
+                    "items": products_selected,
+                };
+            //  console.log(JSON.stringify(options));   //  só para testar
+                
+                try {
+                    const result = await (await FETCH(URL, {
+                        method: "POST",
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Origin': 'https://www.perimin.com.br',
+
+                            'Authorization': `Bearer ${process.env.ACCESS_TOKEN}`
+                        },
+                        body: JSON.stringify(options)
+                    })).json();
+                    console.log(result)
+
+                    qrCode.toDataURL(result.qr_data, {errorCorrectionLevel: "H", margin: 2}, (Error, URL) => {
+                        if (Error) {
+                            res.sendStatus(200);
+                            console.error(Error);
+                        } else {
+                            res.send(JSON.stringify({'QR_BASE-64': URL, 'external_reference': external_reference}));
+                            console.log("QR Code Generated!");
+                        }
+                    });
+                    
+                }
+                catch (error) {
+                    console.error(error);
                     res.sendStatus(500);
                 }
-            });
+            } else {
+                res.sendStatus(500);
+            }
             return;
+        }
+  
+
+
+        // INTEGRAÇÃO PLANILHA - METODO ANTIGO 
+    /*
+        case "getSheet":
+            const name = content.name;
+            const address = content.address;
+            getAuthenticatedClient().then(auth => {
+                acessSheet(auth, name, address).then(msg => res.send(msg));
+            }).catch(error => console.error(error));
+            return;
+
+        case "changeSheet":
+            getAuthenticatedClient().then((auth) => {
+                changeSheet(auth, content.type, content.data).then(msg => res.send(msg))
+            }).catch(error => console.error(error));
+            return;
+           */ 
 
         case "payment_WebHook":
             PAYMENT_WEBHOOKERS[content.reference] = content.hooker_id
@@ -745,7 +936,7 @@ APPLICATION.post("/callbackML", jsonParser, async (req, res) => {
                     method: "GET",
                     headers: {
                         'Content-Type': 'application/json',
-                        'Origin': 'https://usp.perimin.com.br',
+                        'Origin': 'https://www.perimin.com.br',
 
                         'Authorization': `Bearer ${process.env.ACCESS_TOKEN}`
                     }
@@ -877,4 +1068,5 @@ WSS.on('connection', (ws) => {
 
 
 
-SERVER.listen(PORT, "127.0.0.1", 511, () => console.log(`Back-End listening on port ${PORT}`));
+// SERVER.listen(PORT, "127.0.0.1", 511, () => console.log(`Back-End listening on port ${PORT}`));
+SERVER.listen(PORT, "0.0.0.0", 511, () => console.log(`Back-End listening on port ${PORT}`));

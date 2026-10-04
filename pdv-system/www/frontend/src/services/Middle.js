@@ -187,27 +187,6 @@ const FORMAT_TIME = {
 };
 
 
-async function accessSheet(sheetName, sheetAddress) {
-    if (typeof sheetName === "string" && typeof sheetAddress === "string") {
-        return await acessBACK({
-            method: "POST",
-            index: "getSheet",
-            name: sheetName,
-            address: sheetAddress
-        }).then(value => value.values);
-    }
-}
-async function changeSheet(category, data) {
-    if (typeof category === "string" && typeof data === "object") {
-        return await acessBACK({
-            method: "POST",
-            index: "changeSheet",
-            type: category,
-            data: data
-        });
-    }
-}
-
 export async function logIn(user, pass) {
     if (typeof user === "string" && typeof pass === "string") {
         const response = await fetch("https://usp.perimin.com.br/Authenticate", {
@@ -254,6 +233,204 @@ async function recursiveMethod(func) {
     return newInfos;
 }
 
+// METODOS PARA OBTER DADOS DO BACK
+export async function getTotalCosts() {
+    try {
+        return await recursiveMethod(async () => {
+            const {total} = await acessBACK({
+                method: "POST",
+                index: "getRevenue"
+            });
+            return total;
+        });
+    } catch (error) {
+        return new Error(error);
+    }
+}
+
+export async function getStockInfos() {
+    try {
+        return await recursiveMethod(async () => {
+            const products = await acessBACK({method: "POST", index: "getProducts"});
+            if (!Array.isArray(products)) throw new Error("Resposta inválida de getProducts");
+
+            return Object.fromEntries(products.map(p => {
+                // {name: price}, calculado uma vez por produto
+                const extras = Object.fromEntries(p.extras.map(e => [e.name, e.price]));
+
+                const variants = Object.fromEntries(p.variants.map(v => [
+                    v.type,
+                    {quant_restante: v.stock, valor: v.price, extras}
+                ]));
+                return [p.name, variants];
+            }));
+        });
+    } catch (error) {
+        return new Error(error);
+    }
+}
+
+export async function getAllAvaliacoes() {
+    try {
+        return await recursiveMethod(async () => {
+            const reviews = await acessBACK({method: "POST", index: "getReviews"});
+            if (!Array.isArray(reviews)) throw new Error("Resposta inválida de getReviews");
+
+            return Object.fromEntries(reviews.map(r => [
+                r.saleExternalId,
+                {estrelas: r.stars, comentario: r.comment ?? ""}
+            ]));
+        });
+    } catch (error) {
+        return new Error(error);
+    }
+ }
+
+ async function fetchSales() {
+    const sales = await acessBACK({method: "POST", index: "getSales"});
+    if (!Array.isArray(sales)) throw new Error("Resposta inválida de getSales");
+    return sales;
+}
+
+export async function getAllCompras() {
+    try {
+        return await recursiveMethod(async () => {
+            const sales = await fetchSales();
+            const organisedInfos = {};
+
+            sales.forEach(sale => {
+                const ID = sale.externalId;
+                const comanda = String(sale.tabNumber).replace(/\D/g, "");
+
+                if (!organisedInfos[ID]) organisedInfos[ID] = {};
+                organisedInfos[ID][comanda] = {
+                    compras: sale.items.map(i => ({
+                        hora: i.time, nome: i.product, sabor: i.type,
+                        quant: i.quantity, extra: i.extras
+                    })),
+                    recebido: sale.delivered,
+                    comment: sale.comment
+                };
+            });
+            return organisedInfos;
+        });
+    } catch (error) {
+        return new Error(error);
+    }
+}
+
+export async function getCompradores_Infos() {
+    try {
+        return await recursiveMethod(async () => {
+            const sales = await fetchSales();
+            const organisedInfos = {};
+
+            sales.forEach(sale => {
+                if (organisedInfos[sale.externalId]) return; 
+
+                const [name, ...rest] = sale.buyer.split(" ");
+                organisedInfos[sale.externalId] = {
+                    nome: name,
+                    sobrenome: rest.join(" "),
+                    horario_compra: getMinTime(sale.items.map(i => ({hora: i.time})))
+                };
+            });
+            return organisedInfos;
+        });
+    } catch (error) {
+        return new Error(error);
+    }
+}
+
+export async function addCompra_Caixa() {
+    try {
+        return await recursiveMethod(async () => {
+            const results = await acessBACK({
+                method: "POST", index: "addPurchase",
+                data: {
+                    comment: localStorage.getItem("comment"),
+                    buyer: localStorage.getItem("buyer"),
+                    products: JSON.parse(localStorage.getItem("itens"))
+                }
+            });
+            if (results && results.ok) return true;
+            throw Error(results?.error ?? "Falha ao registrar a compra");
+        });
+    } catch (error) {
+        return new Error(error);
+    }
+}
+
+export async function receiveCompra(comandaID) {
+    try {
+        return await recursiveMethod(async () => {
+            const results = await acessBACK({
+                method: "POST",
+                index: "deliverSale",
+                data: {
+                    comanda: comandaID
+                }
+            });
+
+            if (results?.ok) return true;
+            throw Error("Falha ao marcar a comanda como entregue");
+
+        });
+    } catch (error) {
+        return new Error(error);
+    }
+}
+
+export async function sendAvaliacao(tableInfos) {
+    try {
+        return await recursiveMethod(async () => {
+            const COMPRADORES = await getCompradores_Infos();
+
+            if (!COMPRADORES[dadosSalvos.ID]) {
+                throw new Error("Client ID review not matching with the server's database.");
+            }
+
+            const results = await acessBACK({
+                method: "POST",
+                index: "addReview",
+                data: tableInfos
+            });
+
+            if (results?.ok) {
+                return true;
+            }
+
+            throw new Error("Falha ao enviar avaliação");
+        });
+    } catch (error) {
+        return new Error(error);
+    }
+}
+
+// METODOS ANTIGOS
+/* 
+
+async function accessSheet(sheetName, sheetAddress) {
+    if (typeof sheetName === "string" && typeof sheetAddress === "string") {
+        return await acessBACK({
+            method: "POST",
+            index: "getSheet",
+            name: sheetName,
+            address: sheetAddress
+        }).then(value => value.values);
+    }
+}
+async function changeSheet(category, data) {
+    if (typeof category === "string" && typeof data === "object") {
+        return await acessBACK({
+            method: "POST",
+            index: "changeSheet",
+            type: category,
+            data: data
+        });
+    }
+}
+
 export async function getTotalCosts() {
     try {
         return await recursiveMethod(async () => {
@@ -264,6 +441,7 @@ export async function getTotalCosts() {
         return new Error(error);
     }
 }
+
 export async function getStockInfos() {
     try {
         return await recursiveMethod(async () => {
@@ -387,7 +565,6 @@ export async function getCompradores_Infos() {
     }
 }
 
-
 export async function addCompra_Caixa() {
     try {
         return await recursiveMethod(async () => {
@@ -412,6 +589,8 @@ export async function addCompra_Caixa() {
         return new Error(error);
     }
 }
+
+
 export async function receiveCompra(comandaID) {
     try {
         return await recursiveMethod(async () => {
@@ -419,6 +598,7 @@ export async function receiveCompra(comandaID) {
             const results = await changeSheet("receberComanda", {
                 comanda: comandaID
             });
+            
 
             console.log(results);
             if (results.status === 200 && results.statusText === "OK") {
@@ -457,6 +637,8 @@ export async function sendAvaliacao(tableInfos) {
         return new Error(error);
     }
 }
+
+*/
 
 export async function receiveWebHook(referer) {
     return await recursiveMethod(async () => {
