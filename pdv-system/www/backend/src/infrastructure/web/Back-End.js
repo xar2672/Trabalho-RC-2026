@@ -908,6 +908,7 @@ APPLICATION.post("/", corsMiddleware, jsonParser, async (req, res) => {
     res.sendStatus(501);
 });
 
+// QUESTÃO DE SEGURANÇA????
 APPLICATION.post("/refresh", corsMiddleware, async (req, res) => {
     const content = req.body;
     if (content.index === "refresh") {
@@ -920,6 +921,7 @@ APPLICATION.post("/refresh", corsMiddleware, async (req, res) => {
         res.sendStatus(200);
     }
 });
+// MUDAR TOTALMENTE AQUI
 APPLICATION.post("/callbackML", jsonParser, async (req, res) => {
     const BODY = req.body;
     const HEADERS = req.headers;
@@ -994,7 +996,7 @@ APPLICATION.post("/callbackML", jsonParser, async (req, res) => {
         hmac.update(manifest);
 
         if (hmac.digest('hex') === hash) {
-            //eeee
+            //AQQQUIIII
 
             res.sendStatus(200);
             console.log("HMAC verification passed");
@@ -1023,6 +1025,17 @@ APPLICATION.post("/oauth/authenticate", corsMiddleware, async (req, res, next) =
 });
 
 
+
+
+
+
+
+
+
+
+
+
+//SOCKET LIGAÇÃO SERVER-CLIENTE ESTAR VIVO
 
 
 const SERVER = HTTPS.createServer(CRED, APPLICATION);
