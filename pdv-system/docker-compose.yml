@@ -16,17 +16,33 @@ services:
     restart: unless-stopped
 
   backend:
-    image: node:20-alpine
+    build:
+      context: ./www/backend/
+      dockerfile: Dockerfile
     container_name: pdv_backend_node
-    working_dir: /web
+    working_dir: /pdv
+    env_file:
+      - .env
+    environment:
+      - CHOKIDAR_USEPOLLING=true
     volumes:
-      - ./www/backend/src/infrastructure/web/:/web
+      - ./www/backend/src/infrastructure/web/:/pdv
+      - /pdv/node_modules
     command: sh -c "npm install && npm start"
     ports:
       - "3005:3000"
     networks:
       - pdv_network
     restart: unless-stopped
+    develop:
+      watch:
+        - action: sync+restart
+          path: ./www/backend/src/infrastructure/web/
+          target: /web
+          ignore:
+            - node_modules/
+        - action: rebuild
+          path: ./www/backend/src/infrastructure/web/package.json
 
   cloudflared:
     image: cloudflare/cloudflared:latest

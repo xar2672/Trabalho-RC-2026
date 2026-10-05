@@ -1,37 +1,31 @@
-#!usr/bin/env nodejs
+#!/usr/bin/env nodejs
 
 
 import BODY_PARSER from "body-parser";
-import {WebSocketServer} from "ws";
+import {WebSocketServer, WebSocket} from "ws";
 import FETCH from "node-fetch";
 import EXPRESS from "express";
-import HTTPS from "https";
+import HTTP from "http";
 import CORS from "cors";
 import db from "./db.js";
-import DOTNEV from "dotenv";
-// DOTNEV.configDotenv({path: "/home/grasnik/Desktop/Caixa/Private/.env"});
-DOTNEV.configDotenv();
-const MOCK_MODE = process.env.MOCK_MODE === "true";
+import path from "path";
 
 import OAuth2Server from "@node-oauth/oauth2-server";
 import cookieParser from "cookie-parser";
 import qrCode from "qrcode";
 
 import CRYPTO from "crypto";
-
 import fs from "fs";
-import url from "url";
-import open from "open";
-import path from "path";
-import process from "process";
-import {google} from 'googleapis';
-import destroyer from "server-destroy";
+import process from "process"
 
-const origins = ["https://scripts.google.com/", "https://sheets.googleapis.com/", "https://apis.google.com/", "https://accounts.google.com/", "https://www.perimin.com.br", "https://127.0.0.1:443", "https://localhost", "https://mercadopago.com.ar", "http://localhost:5500"];
+
+const MOCK_MODE = process.env.MOCK_MODE === "true";
+
+const origins = ["https://usp.perimin.com.br", "https://localhost", "https://mercadopago.com.ar"];
 const corsOptions = {
     origin: function(origin, callback) {
         let corsOptions;
-        console.log(origin);
+        console.log(`ORIGIN ACCESSED: ${origin}`);
 
         let isDomainAllowed = origins.indexOf(origin) !== -1;
         if (isDomainAllowed) {
@@ -49,8 +43,7 @@ const corsOptions = {
 
 const corsMiddleware = CORS(corsOptions);
 const APPLICATION = EXPRESS();
-// const PORT = 8080;
-const PORT =  process.env.PORT || 8080;
+const PORT =  process.env.PORT ?? 3005;
 
 var PAYMENT_WEBHOOKERS = {};
 var CLIENTS = [];
@@ -61,25 +54,13 @@ APPLICATION.use(BODY_PARSER.urlencoded({ extended: true }));
 
 
 
-
-// const PRIVATE_KEY = fs.readFileSync("/srv/http_certificates/feira/certificate.key", "utf8");
-// const CERTIFICATE = fs.readFileSync("/srv/http_certificates/feira/cert.pem", "utf8");
-const PRIVATE_KEY = fs.readFileSync("./certs/key.pem", "utf8");
-const CERTIFICATE = fs.readFileSync("./certs/cert.pem", "utf8");
-
-const CRED = {key: PRIVATE_KEY, cert: CERTIFICATE};
-
-const CREDENTIALS_PATH = path.join(process.cwd(), '/Desktop/Caixa/Private/Credentials.json');
-const TOKENS_PATH = path.join(process.cwd(), '/Desktop/Caixa/Private/tokens.json');
-// const CREDENTIALS = JSON.parse(fs.readFileSync(CREDENTIALS_PATH, "utf8"));
+const CREDENTIALS_PATH = path.join(process.cwd(), 'Credentials.json');
+const TOKENS_PATH = path.join(process.cwd(), 'tokens.json');
 const CREDENTIALS = MOCK_MODE
     ? {client_id: "mock", client_secret: "mock", redirect_uris: ["https://localhost:3000/oauth2callback"]}
     : JSON.parse(fs.readFileSync(CREDENTIALS_PATH, "utf8"));
 
-const SCOPES = ["https://www.googleapis.com/auth/spreadsheets"];
 const jsonParser = BODY_PARSER.json();
-
-const FORCE_AUTHENTICATION = false;
 const readToken = async () => {
     if (fs.existsSync(TOKENS_PATH)) {
         return JSON.parse( await fs.promises.readFile(TOKENS_PATH, 'utf8', (error) => {
@@ -94,64 +75,8 @@ const readToken = async () => {
     }
 }
 
-// metodo de autenticacao da planilha 
-const getAuthenticatedClient = async () => {
-      if (MOCK_MODE) {return "MOCK_AUTH";}  
-    var oAuth2Client = new google.auth.OAuth2(CREDENTIALS.client_id, CREDENTIALS.client_secret, CREDENTIALS.redirect_uris[0]);
-    return await new Promise(async (resolve, reject) => {
-        const saved_token = (await readToken())["sheets_apis"];
-        if (!FORCE_AUTHENTICATION && (saved_token && new Date().getTime() <= saved_token.expiry_date) ) {
-            oAuth2Client.setCredentials(saved_token);
-            resolve(oAuth2Client);
-        } else {
-            const authUrl = oAuth2Client.generateAuthUrl({
-                access_type: 'offline',
-                prompt: "consent",
-                scope: SCOPES,
-            });
-            try {
-                const server = HTTPS.createServer(CRED, async (req, res) => {
-                    try {
-                        if (req.url.indexOf('/oauth2callback') > -1) {
-                            const searchParams = new url.URL(req.url, 'https://localhost:3000').searchParams;
-                            const code = searchParams.get('code');
-    
-                            res.end("<script>window.close();</script > ");
-                            server.destroy();
-    
-                            const resp = await oAuth2Client.getToken(code);
-                            oAuth2Client.setCredentials(resp.tokens);
-                            console.info('Tokens acquired.');
 
-                            const lido = await readToken();
-                            lido["sheets_apis"] = resp.tokens;
-                            await fs.promises.writeFile(TOKENS_PATH, JSON.stringify(lido, null, 4), (error) => {
-                                if (error) {
-                                    console.log('Error writing to token.json:', error);
-                                    throw new Error(`${error}`);
-                                }
-                            });
-                            resolve(oAuth2Client);
-                        }
-                    } catch (error) {
-                        console.log(error);
-                        reject(error);
-                    }
-                }).listen(3000, async () => {
-                    console.log(authUrl);
-                    await open(authUrl, {wait: true}).then(cp => {cp.unref();});
-                });
-                destroyer(server);
-            } catch (error) {
-                console.error(error);
-                reject('Error while exchanging code for tokens');
-            }
-        }
-    });
-};
-
-
-const lifeTime = 15 * 24 * 60 * 60 * 3600;
+const lifeTime = 7 * 24 * 60 * 3600; // 7 Dias de LifeTime do Cookie
 const OAUTH = new OAuth2Server({
     model: {
         getClient: async (clientId, clientSecret) => {
@@ -251,44 +176,7 @@ async function authenticateRequest(req, res) {
 
 
 
-const SPREADSHEETID = process.env.SPREADSHEETID;
-const API_KEY = process.env.API_KEY;
 
-async function acessSheet(auth, sheet, interval) {
-      if (MOCK_MODE) {return {values: []};}  
-    const sheets = google.sheets({version: "v4", auth: auth});
-    let response;
-    try {
-        response = await sheets.spreadsheets.values.get({
-            spreadsheetId: SPREADSHEETID,
-            range: (`${sheet}!${interval}`), // Aqui vem as planilhas ([Nome dela]! + Intervalo)
-            key: API_KEY,
-            headers: {
-                referer: "https://www.perimin.com.br",
-            }
-        });
-    } 
-    catch (err) {
-        console.error(err);
-        return undefined;
-    }
-
-    const range = response.data;
-    if (!range || !range.values || range.values.length == 0) {
-        console.error("Not found :(");
-        return undefined;
-    }
-
-    return range;
-}
-
-const generateTAB = () => Math.floor( 1000 + Math.random() * 8999 ).toString();
-const getRecentHour = () => new Date().toLocaleString("pt-BR", {
-    hour12: false,
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit"
-});
 
 class UserError extends Error {}   // erros "esperados": estoque, produto inexistente...
 
@@ -324,6 +212,9 @@ function priceItems(products) {
     });
 }
 
+
+const generateTAB = () => Math.floor( 1000 + Math.random() * 8999 ).toString();
+
 // Transaction para dar rollback em caso de erro na hora de inserir a venda
 const createSale = db.transaction((buyer, comment, products) => {
     const items = priceItems(products);
@@ -346,257 +237,13 @@ const createSale = db.transaction((buyer, comment, products) => {
     return {externalId, tabNumber, total};
 });
 
-// METODO ANTIGO - PLANILHA (VERFICAR AQUI DEPOS)
-/*
-async function changeSheet(auth, changeType, infos) {
-    const sheets = google.sheets({version: "v4", auth: auth});
-    let response;
-    try {
-        switch (changeType) {
-            case "addReview":
-                const responsive_lastROW = await sheets.spreadsheets.values.get({
-                    spreadsheetId: SPREADSHEETID,
-                    range: (`Avaliações!C7:C`), // Aqui vem as planilhas ([Nome dela]! + Intervalo)
-                    key: API_KEY,
-                    headers: {
-                        referer: "https://www.perimin.com.br",
-                    }
-                });
-
-                
-                if (infos.ID && infos.estrelas && infos.comentario &&
-                    responsive_lastROW.data && responsive_lastROW.data.values) {
-                    const AVALIACOES = responsive_lastROW.data.values;
-                    let index = 7;
-                    AVALIACOES.forEach(async reviewROW => {
-                        const ID = reviewROW[0].substring(1);
-                        if (ID === infos.ID) {return;}
-                        index++;
-                    });
-
-                    const setValue = [];
-                    setValue[0] = getRecentHour();
-                    setValue[1] = `#${infos.ID}`;
-                    setValue[2] = infos.name;
-                    setValue[3] = infos.estrelas;
-                    setValue[4] = "";
-                    setValue[5] = infos.comentario;
-
-                    response = await sheets.spreadsheets.values.update({
-                        spreadsheetId: SPREADSHEETID,
-                        range: (`Avaliações!B${index}:G${index}`),
-
-                        key: API_KEY,
-                        valueInputOption: "USER_ENTERED",
-
-                        headers: {
-                            referer: "https://www.perimin.com.br",
-                        },
-                        requestBody: {
-                            values: [setValue]
-                        }
-                    });
-                    return response;
-                } else {return false;}
-            case "addPurchase":
-                const purchase_lastROW = await sheets.spreadsheets.values.get({
-                    spreadsheetId: SPREADSHEETID,
-                    range: (`Vendas!B7:C`), // Aqui vem as planilhas ([Nome dela]! + Intervalo)
-                    key: API_KEY,
-                    headers: {
-                        referer: "https://www.perimin.com.br",
-                    }
-                });
-                const PRODUCTS = await sheets.spreadsheets.values.get({
-                    spreadsheetId: SPREADSHEETID,
-                    range: (`Status!G12:M`), // Aqui vem as planilhas ([Nome dela]! + Intervalo)
-                    key: API_KEY,
-                    headers: {
-                        referer: "https://www.perimin.com.br",
-                    }
-                }); 
-                
-                //  * infos tem que ter:
-                //  * => infos.buyer
-                //  * => infos.comment
-                //  * => ARRAY QUE ENGLOBA (infos.produtos_comprados):
-                //  *  -> infos.extras
-                //  *  -> infos.produto
-                //  *  -> infos.quantidade
-                //  *  -> infos.tipo
-                //  * 
-               
-
-                if (PRODUCTS.data && PRODUCTS.data.values &&
-                    infos.buyer && infos.products && 
-                    typeof infos.comment && purchase_lastROW.data && purchase_lastROW.data.values) {
-                    const COMPRAS = purchase_lastROW.data.values;
-                    const index = COMPRAS.length + 7;
-
-                    let indexID = COMPRAS.find(compraROW => compraROW[2] === infos.buyer);
-                    if (infos.buyer === "-- x --" || indexID === undefined) {
-                        indexID = generateTAB();
-                    };
-                    
-
-                    const list_Products = {};
-                    PRODUCTS.data.values.forEach(linha_Produto => {
-                        const nome = linha_Produto[0];
-                        const lista_tipos = JSON.parse(linha_Produto[3]);
-                        const lista_precos = JSON.parse(linha_Produto[4]);
-                        const lista_extras = linha_Produto[5] !== "" ? JSON.parse(JSON.parse(linha_Produto[5])) : {};
-        
-                        const inside = {};
-                        const lista_quant = JSON.parse(linha_Produto[6]);
-                        lista_tipos.forEach(tipo => {
-                            const index = lista_tipos.indexOf(tipo);
-                            inside[tipo] = {
-                                quant_restante: lista_quant[index],
-                                valor: lista_precos[index],
-                                extras: lista_extras
-                            }
-                        });
-        
-                        list_Products[nome] = inside;
-                    });
-
-                    let total_price = 0;
-                    const products_selected = [];
-                    infos.products.forEach(produto => {
-                        const tipo = produto["tipo"];
-                        const name = produto["produto"];
-                        const quantity = produto["quantidade"];
-                        const infos_product = list_Products[name][tipo];
-                        if (infos_product["quant_restante"] > 0 && quantity > 0) {
-                            const extra_product = produto["extras"];
-                            let inner_price = 0;
-                            let extras = {};
-
-                            if (extra_product) {
-                                extras = Object.keys(extra_product).filter(key => extra_product[key] === true);
-                                if (Object.keys(extras).length > 0) {
-                                    extras.forEach(extra => 
-                                        inner_price += infos_product["extras"][extra]
-                                    );
-                                }
-                            }
-
-                            inner_price += infos_product["valor"];
-                            inner_price *= quantity;
-                            
-                            products_selected.push({
-                                "hora": getRecentHour(),
-                                "nome": name,
-                                "quant": quantity,
-                                "sabor": tipo,
-                                "extra": extras
-                            });
-
-                            total_price += inner_price;
-                            infos_product["quant_restante"] -= quantity;
-                        }
-                    });
-
-
-                    const setValue = [];
-                    setValue[0] = `#${indexID}`;
-                    setValue[1] = `${infos.buyer}`;
-                    setValue[2] = `#${generateTAB()}`;
-                    setValue[3] = total_price;
-                    setValue[4] = JSON.stringify(products_selected);
-                    setValue[5] = infos.comment;
-                    setValue[6] = false;
-
-                    const productQuantity = [];
-                    Object.values(list_Products).forEach(value => {
-                        const quantity_row = [];
-                        Object.values(value).forEach(tipo => quantity_row.push(tipo["quant_restante"]));
-                        productQuantity.push([JSON.stringify(quantity_row)]);
-                    });
-
-                    console.log(setValue);
-                    console.log(productQuantity);
-                    
-                    await sheets.spreadsheets.values.update({
-                        spreadsheetId: SPREADSHEETID,
-                        range: (`Status!M12:M`),
-
-                        key: API_KEY,
-                        valueInputOption: "USER_ENTERED",
-
-                        headers: {referer: "https://www.perimin.com.br"},
-                        requestBody: {
-                            values: productQuantity
-                        }
-                    });
-                    response = await sheets.spreadsheets.values.update({
-                        spreadsheetId: SPREADSHEETID,
-                        range: (`Vendas!B${index}:H${index}`),
-
-                        key: API_KEY,
-                        valueInputOption: "USER_ENTERED",
-
-                        headers: {referer: "https://www.perimin.com.br"},
-                        requestBody: {
-                            values: [setValue]
-                        }
-                    });
-                    return response;
-                } else {return false;}
-            case "receberComanda":
-                const purchaseLIST = await sheets.spreadsheets.values.get({
-                    spreadsheetId: SPREADSHEETID,
-                    range: (`Vendas!D7:D`), // Aqui vem as planilhas ([Nome dela]! + Intervalo)
-                    key: API_KEY,
-                    headers: {
-                        referer: "https://www.perimin.com.br",
-                    }
-                });
-                
-                //  * 
-                //  * infos tem que ter:
-                //  * => infos.comanda
-                
-                
-                if (infos.comanda &&
-                    purchaseLIST.data && purchaseLIST.data.values) {
-                    const COMPRAS = purchaseLIST.data.values;
-                    const findROW = COMPRAS.find(row => row[0].substring(1) === infos.comanda);
-                    const index = COMPRAS.findIndex(row => row === findROW) + 7;
-
-                    if (findROW) {
-                        response = await sheets.spreadsheets.values.update({
-                            spreadsheetId: SPREADSHEETID,
-                            range: (`Vendas!H${index}`),
-
-                            key: API_KEY,
-                            valueInputOption: "USER_ENTERED",
-
-                            headers: {referer: "https://www.perimin.com.br"},
-                            requestBody: {
-                                values: [[true]]
-                            }
-                        });
-                        return response;
-                    } else {return false;}
-                } else {return false;}
-            default: return false;
-        }
-    } 
-    catch (err) {
-        console.error(err);
-        return false;
-    }
-}
-*/
-
-
 
 APPLICATION.use(cookieParser());
 APPLICATION.post("/", corsMiddleware, jsonParser, async (req, res) => {
     const content = req.body;
     if ( (content.index === "getAccountInfos" || content.index === "payment_WebHook")
-        || ( content.data && (content.data.comanda || content.data.buyer || content.data.products) )) {
+        || ( content.data && (content.data.comanda || content.data.buyer || content.data.products) ))
+    {
         const sessionToken = req.cookies.session_token;
         if (sessionToken) {
             req.headers.authorization = `Bearer ${sessionToken.accessToken}`;
@@ -605,9 +252,8 @@ APPLICATION.post("/", corsMiddleware, jsonParser, async (req, res) => {
         } else {res.send(false); return false;}
     }
 
-    let options;
     console.log("-------------------");
-    console.log(content)
+    console.log(content);
     switch (content.index) {
         case "getAccountInfos":
             const user_infos = req.user.user;
@@ -617,149 +263,140 @@ APPLICATION.post("/", corsMiddleware, jsonParser, async (req, res) => {
             });
             return;
 
-    // API para recuperar o total da vendas
-    case "getRevenue": {
-         const row = db.prepare("SELECT COALESCE(SUM(total), 0) AS total FROM sales").get();
-         res.status(200).json({total: row.total});
-    return;
-    }
+        // API para recuperar o total da vendas
+        case "getRevenue": {
+            const row = db.prepare("SELECT COALESCE(SUM(total), 0) AS total FROM sales").get();
+            res.status(200).json({total: row.total});
+            return;
+        }
 
-    // API para recuperar as avaliações da base
-    case "getReviews": {
-    const reviews = db.prepare(`
-        SELECT s.external_id   AS saleExternalId, r.reviewer_name AS reviewer, r.stars AS stars, r.comment AS comment
-        FROM reviews r
-        JOIN sales s ON s.id = r.sale_id
-        ORDER BY r.created_at
-    `).all();
+        // API para recuperar as avaliações da base
+        case "getReviews": {
+            const reviews = db.prepare(`
+                SELECT s.external_id   AS saleExternalId, r.reviewer_name AS reviewer, r.stars AS stars, r.comment AS comment
+                FROM reviews r
+                JOIN sales s ON s.id = r.sale_id
+                ORDER BY r.created_at
+            `).all();
 
-    res.status(200).json(reviews);
-    return;
-    }
+            res.status(200).json(reviews);
+            return;
+        }
 
+        // API para recuperar os produtos
+        case "getProducts": { 
+            // obtem as informação de produto das tabelas
+            const products = db.prepare("SELECT id, name FROM products ORDER BY id").all();
+            const variants = db.prepare(`SELECT product_id, type_name AS type, price, stock_qty AS stock FROM product_variants ORDER BY id`).all();
+            const extras = db.prepare(`SELECT product_id, name, price FROM product_extras ORDER BY id`).all();
 
-    // API para recuperar os produtos
-    case "getProducts": {
+            // retorna um consolidado com as todas as infos de produtos que estão disponiveis nas tabelas de produtos e suas especializações
+            const result = products.map(p => ({
+                name: p.name,
+                variants: variants.filter(v => v.product_id === p.id).map(({type, price, stock}) => ({type, price, stock})),
+                extras: extras.filter(e => e.product_id === p.id).map(({name, price}) => ({name, price}))
+            }));
+
+            res.status(200).json(result);
+            return;
+        }
         
-    // obtem as informação de produto das tabelas
-    const products = db.prepare("SELECT id, name FROM products ORDER BY id").all();
-    const variants = db.prepare(`SELECT product_id, type_name AS type, price, stock_qty AS stock FROM product_variants ORDER BY id`).all();
-    const extras = db.prepare(`SELECT product_id, name, price FROM product_extras ORDER BY id`).all();
+        // API para recuperar as vendas 
+        case "getSales": {
+            const sales = db.prepare(`
+                SELECT id, tab_number AS tabNumber,
+                    buyer_name        AS buyer,
+                    external_id       AS externalId,
+                    total,
+                    COALESCE(comment,'') AS comment,
+                    delivered FROM sales ORDER BY id
+            `).all();
 
-    // retorna um consolidado com as todas as infos de produtos que estão disponiveis nas tabelas de produtos e suas especializações
-    const result = products.map(p => ({
-        name: p.name,
-        variants: variants.filter(v => v.product_id === p.id).map(({type, price, stock}) => ({type, price, stock})),
-        extras: extras.filter(e => e.product_id === p.id).map(({name, price}) => ({name, price}))
-    }));
+            const items = db.prepare(`
+                SELECT si.sale_id AS saleId,
+                    p.name           AS product,
+                    v.type_name      AS type,
+                    si.quantity      AS quantity,
+                    si.unit_price    AS unitPrice,
+                    si.extras        AS extras,
+                    time(si.sold_at) AS time
+                FROM sale_items si
+                JOIN product_variants v ON v.id = si.variant_id
+                JOIN products p         ON p.id = v.product_id
+                ORDER BY si.id
+            `).all();
 
-    res.status(200).json(result);
-    return;
-}
-    // API para recuperar as vendas 
-    case "getSales": 
-    
-        const sales = db.prepare(`
-            SELECT id, tab_number AS tabNumber,
-                buyer_name        AS buyer,
-                external_id       AS externalId,
-                total,
-                COALESCE(comment,'') AS comment,
-                delivered FROM sales ORDER BY id`).all();
+            const result = sales.map(s => ({
+                tabNumber:  s.tabNumber,
+                buyer:      s.buyer,
+                externalId: s.externalId,
+                total:      s.total,
+                comment:    s.comment,
+                delivered:  s.delivered === 1,
+                items: items.filter(i => i.saleId === s.id)
+                    .map(({saleId, extras, ...rest}) => ({
+                        ...rest,extras: extras ? JSON.parse(extras) : [] }))
+            }));
 
-        const items = db.prepare(`
-            SELECT si.sale_id AS saleId,
-                p.name           AS product,
-                v.type_name      AS type,
-                si.quantity      AS quantity,
-                si.unit_price    AS unitPrice,
-                si.extras        AS extras,
-                time(si.sold_at) AS time
-            FROM sale_items si
-            JOIN product_variants v ON v.id = si.variant_id
-            JOIN products p         ON p.id = v.product_id
-            ORDER BY si.id`).all();
+            res.status(200).json(result);
+            return;
+        }
 
-        const result = sales.map(s => ({
-            tabNumber:  s.tabNumber,
-            buyer:      s.buyer,
-            externalId: s.externalId,
-            total:      s.total,
-            comment:    s.comment,
-            delivered:  s.delivered === 1,
-            items: items.filter(i => i.saleId === s.id)
-                .map(({saleId, extras, ...rest}) => ({
-                    ...rest,extras: extras ? JSON.parse(extras) : [] }))
-        }));
 
-        res.status(200).json(result);
-        return;
-
-    // APIS PARA INSERÇAO NA BASE
-
+        // APIs para inserção na base
         case "addPurchase": {
-        const {buyer, comment, products} = content.data ?? {};
-        if (!buyer || !Array.isArray(products) || products.length === 0) {
-            res.status(400).json({ok: false, error: "Dados inválidos"});
+            const {buyer, comment, products} = content.data ?? {};
+            if (!buyer || !Array.isArray(products) || products.length === 0) {
+                res.status(400).json({ok: false, error: "Dados inválidos"});
+                return;
+            }
+            try { // chama o metodo de inserção (implementado mais acima com tratamentos transacionais)
+                res.status(200).json({ok: true, ...createSale(buyer, comment ?? "", products)});
+            } catch (e) {
+                const expected = e instanceof UserError;
+                if (!expected) console.error(e);
+                res.status(expected ? 409 : 500).json({ok: false, error: expected ? e.message : "Erro interno"});
+            }
             return;
         }
-        try { // chama o metodo de inserção (implementado mais acima com tratamentos transacionais)
-            res.status(200).json({ok: true, ...createSale(buyer, comment ?? "", products)});
-        } catch (e) {
-            const expected = e instanceof UserError;
-            if (!expected) console.error(e);
-            res.status(expected ? 409 : 500).json({ok: false, error: expected ? e.message : "Erro interno"});
-        }
-        return;
-    }
 
-    case "deliverSale": {
-        const tab = String(content.data?.comanda ?? "").replace(/\D/g, ""); // aceita "#1001" ou "1001"
-        // comando sql para alterar o estado da venda
-        const r = db.prepare("UPDATE sales SET delivered = 1 WHERE tab_number = ?").run(tab);
-        res.status(200).json({ok: r.changes > 0});
-        return;
-    }
-
-    case "addReview": {
-        const {ID, name, estrelas, comentario} = content.data ?? {};
-        // obtem o id da venda para atrelar os registros das tabelas
-        const sale = db.prepare("SELECT id FROM sales WHERE external_id = ?").get(String(ID ?? ""));
-        const stars = Number(estrelas);
-        if (!sale || !Number.isInteger(stars) || stars < 1 || stars > 5) {
-            res.status(200).json({ok: false});
+        case "deliverSale": {
+            const tab = String(content.data?.comanda ?? "").replace(/\D/g, ""); // aceita "#1001" ou "1001"
+            // comando sql para alterar o estado da venda
+            const r = db.prepare("UPDATE sales SET delivered = 1 WHERE tab_number = ?").run(tab);
+            res.status(200).json({ok: r.changes > 0});
             return;
         }
-        // inserção da avaliação na base
-        db.prepare("INSERT INTO reviews (sale_id, reviewer_name, stars, comment) VALUES (?, ?, ?, ?)")
-        .run(sale.id, name ?? "", stars, comentario || null);
-        res.status(200).json({ok: true});
-        return;
-    }
-        case "payMaquininha":
-            console.log("no")
-            return;
-                case "payPIX": {
-            /**
-                * ADICIONAR ISSO PARA O FRONT-END 
-                * infos tem que ter:
-                * => infos.test_mode
-                * => infos.products
-                * 
-            */
 
+
+        case "addReview": {
+            const {ID, name, estrelas, comentario} = content.data ?? {};
+            // obtém o ID da venda para atrelar os registros das tabelas
+            const sale = db.prepare("SELECT id FROM sales WHERE external_id = ?").get(String(ID ?? ""));
+            const stars = Number(estrelas);
+            if (!sale || !Number.isInteger(stars) || stars < 1 || stars > 5) {
+                res.status(200).json({ok: false});
+                return;
+            }
+            // inserção da avaliação na base
+            db.prepare("INSERT INTO reviews (sale_id, reviewer_name, stars, comment) VALUES (?, ?, ?, ?)")
+            .run(sale.id, name ?? "", stars, comentario || null);
+            res.status(200).json({ok: true});
+            return;
+        }
+
+
+        case "payMaquininha": 
             if (content.test_mode !== undefined && content.products) {
-                const USER_ID = process.env.USER_ID;
-                const EXTERNAL_POS_ID = "FSK001POS01";
-                const URL = `https://api.mercadopago.com/instore/orders/qr/seller/collectors/${USER_ID}/pos/${EXTERNAL_POS_ID}/qrs`;
-
+                const URL = "https://www.mercadopago.com.br/developers/pt/reference/in-person-payments/point/orders/create-order/post";
                 let products_selected = [], total_price = 0;
+
                 if (!content.test_mode) {
                     // preços e estoque agora vêm do SQLite, no mesmo formato que a planilha produzia: { nome: { tipo: { quant_restante, valor, extras: { nomeDoExtra: preço } } } }
                     const list_Products = {};
                     const variantRows = db.prepare(`
                         SELECT p.id AS productId, p.name AS nome, v.type_name AS tipo,
-                               v.price AS valor, v.stock_qty AS quant_restante
+                            v.price AS valor, v.stock_qty AS quant_restante
                         FROM products p JOIN product_variants v ON v.product_id = p.id
                         ORDER BY p.id, v.id`).all();
                     const extraRows = db.prepare(
@@ -828,45 +465,92 @@ APPLICATION.post("/", corsMiddleware, jsonParser, async (req, res) => {
                     total_price = 0.01;
                 }
                 
-                const nowDATE = new Date();
-                const identifier = nowDATE.toLocaleTimeString("pt-Br", {hour: '2-digit', minute:'2-digit', second:'2-digit'});
-                nowDATE.setMinutes(nowDATE.getMinutes() + 15);
 
                 const external_reference = `Compra_${identifier}`;
-                options = {
+                console.log(`Produtos Comprados da Comanda ${identifier}`);
+
+                let payment_method = {};
+                switch (content.payment_method) {
+                    case "pix":
+                        payment_method = {
+                            "default_type": "qr"
+                        }
+                        break;
+                    case "credit_card":
+                        payment_method = {
+                            "default_type": "credit_card",
+                            "default_installments": 1,
+                            "installments_cost": "seller"
+                        }
+                        break;
+
+                    case "debt_card":
+                        payment_method = {
+                            "default_type": "debit_card"
+                        }
+                        break;
+                
+                    case "voucher":
+                        payment_method = {
+                            "default_type": "voucher_card"
+                        }
+                        break;
+
+                    default:
+                        throw new Error("No Payment Method Selected");
+
+                }
+
+                let print_via = content.do_print_via;
+                if (print_via) {
+                    print_via = "no_ticket";
+                } else {
+                    print_via = "seller_ticket";
+                }
+
+
+                // COLOCAR OPÇÃO DE IMPRIMIR DA MAQUININHA
+                // ADD OPÇÃO DE VOUCHER
+                //
+
+                const options = {
+                    "type": "point",
                     "external_reference": external_reference,
-                    "title": `Comanda ${identifier}`,
-                    "description": "Compra realizada pelo MERCADO_PAGO_QR_CODE",
 
-                    "expiration_date": nowDATE,
+                    "expiration_time": "PT10M",
 
-                    "total_amount": total_price,
-                    "items": products_selected,
+                    "transactions": {
+                        "payments": [{
+                            "amount": total_price
+                        }]
+                    },
+                    "config": {
+                        "point": {
+                            "terminal_id": "NEWLAND_N950__SBX0000001",
+                            "print_on_terminal": print_via
+                        },
+                        "payment_method": payment_method
+                    },
+                    "description": `Comanda ${identifier}`
                 };
-            //  console.log(JSON.stringify(options));   //  só para testar
                 
                 try {
+                    const UUID = crypto.randomUUID();
                     const result = await (await FETCH(URL, {
+
                         method: "POST",
                         headers: {
                             'Content-Type': 'application/json',
-                            'Origin': 'https://www.perimin.com.br',
+                            'Origin': 'https://usp.perimin.com.br',
+                            'X-Idempotency-Key': UUID,
 
                             'Authorization': `Bearer ${process.env.ACCESS_TOKEN}`
                         },
                         body: JSON.stringify(options)
-                    })).json();
-                    console.log(result)
 
-                    qrCode.toDataURL(result.qr_data, {errorCorrectionLevel: "H", margin: 2}, (Error, URL) => {
-                        if (Error) {
-                            res.sendStatus(200);
-                            console.error(Error);
-                        } else {
-                            res.send(JSON.stringify({'QR_BASE-64': URL, 'external_reference': external_reference}));
-                            console.log("QR Code Generated!");
-                        }
-                    });
+                    })).json();
+
+                    console.log(result);
                     
                 }
                 catch (error) {
@@ -877,35 +561,19 @@ APPLICATION.post("/", corsMiddleware, jsonParser, async (req, res) => {
                 res.sendStatus(500);
             }
             return;
-        }
-  
-
-
-        // INTEGRAÇÃO PLANILHA - METODO ANTIGO 
-    /*
-        case "getSheet":
-            const name = content.name;
-            const address = content.address;
-            getAuthenticatedClient().then(auth => {
-                acessSheet(auth, name, address).then(msg => res.send(msg));
-            }).catch(error => console.error(error));
-            return;
-
-        case "changeSheet":
-            getAuthenticatedClient().then((auth) => {
-                changeSheet(auth, content.type, content.data).then(msg => res.send(msg))
-            }).catch(error => console.error(error));
-            return;
-           */ 
 
         case "payment_WebHook":
             PAYMENT_WEBHOOKERS[content.reference] = content.hooker_id
             console.log(PAYMENT_WEBHOOKERS);
             res.sendStatus(200);
             return;
+        
         default: break;
+
     }
+    
     res.sendStatus(501);
+
 });
 
 // QUESTÃO DE SEGURANÇA????
@@ -921,7 +589,8 @@ APPLICATION.post("/refresh", corsMiddleware, async (req, res) => {
         res.sendStatus(200);
     }
 });
-// MUDAR TOTALMENTE AQUI
+
+//
 APPLICATION.post("/callbackML", jsonParser, async (req, res) => {
     const BODY = req.body;
     const HEADERS = req.headers;
@@ -948,10 +617,11 @@ APPLICATION.post("/callbackML", jsonParser, async (req, res) => {
                     if (result["issuer_id"]) {
                         name = result["issuer_id"];
                     } else {
-                        const bank_info = result["point_of_interaction"]["transaction_data"]["bank_info"]["payer"]["long_name"];
+                        const bank_info = result["point_of_interaction"]["transaction_data"]["bank_info"]["payer"];
                         name = bank_info["long_name"];
                     }
 
+                    
                     const changed_reference = result["external_reference"];
                     const receiver = Object.keys(PAYMENT_WEBHOOKERS).findIndex(external_reference => external_reference.includes(changed_reference));
 
@@ -996,7 +666,7 @@ APPLICATION.post("/callbackML", jsonParser, async (req, res) => {
         hmac.update(manifest);
 
         if (hmac.digest('hex') === hash) {
-            //AQQQUIIII
+            //
 
             res.sendStatus(200);
             console.log("HMAC verification passed");
@@ -1027,22 +697,14 @@ APPLICATION.post("/oauth/authenticate", corsMiddleware, async (req, res, next) =
 
 
 
-
-
-
-
-
-
-
-
 //SOCKET LIGAÇÃO SERVER-CLIENTE ESTAR VIVO
 
 
-const SERVER = HTTPS.createServer(CRED, APPLICATION);
+const SERVER = HTTP.createServer(APPLICATION);
 const WSS = new WebSocketServer({server: SERVER});
 
 WSS.on('connection', (ws) => {
-    const ID = crypto.randomUUID();
+    const ID = CRYPTO.randomUUID();
     CLIENTS.push({client: ws, UNIQUE_ID: ID});
     console.log('Current clients:', CLIENTS.length);
 

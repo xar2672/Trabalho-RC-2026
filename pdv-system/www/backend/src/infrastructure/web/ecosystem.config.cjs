@@ -1,12 +1,22 @@
 module.exports = {
-  apps: [{
-    name: 'backend',
-    script: '/home/grasnik/Desktop/Caixa/Private/Back-End.js',
-
-    watch: true,
-    watch: ['/home/grasnik/Desktop/Caixa/Private/'],
-    ignore_watch: ['/home/grasnik/Desktop/Caixa/Private/tokens.json'],
-    
-    watch_options: {usePolling: true}
-  }]
+  apps: [
+    {
+      name: 'backend',
+      script: '/app/Back-End.js',
+      watch: true,
+      watch_options: {
+        followSymlinks: false,
+        usePolling: true,
+        interval: 500,
+      },
+      ignore_watch: [
+        'node_modules',
+        'logs',
+        '*.sqlite',
+        '*.sqlite-journal',
+        '.git'
+      ],
+      watch_delay: 10000,
+    },
+  ],
 };
