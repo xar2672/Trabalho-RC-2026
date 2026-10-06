@@ -1,2 +1,3 @@
 # Trabalho-RC-2026
-OBS.: TRABALHO DE PERÉZ.
+
+
