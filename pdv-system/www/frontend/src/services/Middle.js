@@ -136,14 +136,14 @@ export const RECURSION_TRIALS = 3;
 export const getURL = () => {
     const IS_LOCAL = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1";
     return IS_LOCAL
-        ? "http://localhost:85/Private"
-        : "https://usp.perimin.com.br/Private"
+        ? "http://localhost:85"
+        : "https://usp.perimin.com.br"
     ;
 }
 
 
 async function acessBACK(params) {
-    const URL = getURL();
+    const URL = getURL() + "/Private";
     const method = params["method"];
     var response;
 
@@ -189,7 +189,7 @@ const FORMAT_TIME = {
 
 export async function logIn(user, pass) {
     if (typeof user === "string" && typeof pass === "string") {
-        const response = await fetch("https://usp.perimin.com.br/Authenticate", {
+        const response = await fetch(getURL() + "/Authenticate", {
             method: "POST",
             headers: {
                 'Content-Type': 'application/x-www-form-urlencoded',
@@ -212,10 +212,11 @@ export async function logIn(user, pass) {
     }
 }
 export async function getAccountINFOS() {
-    return await acessBACK({
+    const result = await acessBACK({
         method: "POST",
         index: "getAccountInfos"
     });
+    return result;
 }
 
 
@@ -414,7 +415,7 @@ export async function sendAvaliacao(tableInfos) {
 
 export async function receiveWebHook(referer) {
     return await recursiveMethod(async () => {
-        return await fetch("https://usp.perimin.com.br/Private", {
+        return await fetch(getURL() + "/Private", {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
@@ -434,13 +435,15 @@ export async function receiveWebHook(referer) {
 
 
 
-export async function payPIX() {
+export async function payViaPoint(method, do_print) {
     try {
         return recursiveMethod(async () => await acessBACK({
             method: "POST",
             index: "payPIX",
             test_mode: TEST_PRICE_MODE[0],
-            products: JSON.parse(localStorage.getItem("itens"))
+            products: JSON.parse(localStorage.getItem("itens")),
+            payment_method: method,
+            do_print_via: do_print
         }));
     } catch (err) {
         console.error(err);

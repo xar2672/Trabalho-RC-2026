@@ -20,14 +20,14 @@ services:
       context: ./www/backend/
       dockerfile: Dockerfile
     container_name: pdv_backend_node
-    working_dir: /pdv
+    working_dir: /pdv/web
     env_file:
       - .env
     environment:
       - CHOKIDAR_USEPOLLING=true
     volumes:
-      - ./www/backend/src/infrastructure/web/:/pdv
-      - /pdv/node_modules
+      - ./www/backend/src/infrastructure/:/pdv
+      - /pdv/web/node_modules
     command: sh -c "npm install && npm start"
     ports:
       - "3005:3000"
@@ -38,7 +38,7 @@ services:
       watch:
         - action: sync+restart
           path: ./www/backend/src/infrastructure/web/
-          target: /web
+          target: /pdv/web
           ignore:
             - node_modules/
         - action: rebuild

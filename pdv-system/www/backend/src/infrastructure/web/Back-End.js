@@ -7,19 +7,17 @@ import FETCH from "node-fetch";
 import EXPRESS from "express";
 import HTTP from "http";
 import CORS from "cors";
-import db from "./db.js";
+import db from "./database/db.js";
 import path from "path";
 
 import OAuth2Server from "@node-oauth/oauth2-server";
 import cookieParser from "cookie-parser";
-import qrCode from "qrcode";
 
 import CRYPTO from "crypto";
 import fs from "fs";
 import process from "process"
 
 
-const MOCK_MODE = process.env.MOCK_MODE === "true";
 
 const origins = ["https://usp.perimin.com.br", "https://localhost", "https://mercadopago.com.ar"];
 const corsOptions = {
@@ -45,8 +43,19 @@ const corsMiddleware = CORS(corsOptions);
 const APPLICATION = EXPRESS();
 const PORT =  process.env.PORT ?? 3005;
 
-var PAYMENT_WEBHOOKERS = {};
-var CLIENTS = [];
+db.exec(`
+  CREATE TABLE IF NOT EXISTS payment_webhooks (
+    reference TEXT PRIMARY KEY,
+    hooker_id TEXT NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  );
+`);
+
+const insertWebhook = db.prepare("INSERT OR REPLACE INTO payment_webhooks (reference, hooker_id) VALUES (?, ?)");
+const findWebhookByRef = db.prepare("SELECT reference, hooker_id FROM payment_webhooks WHERE ? LIKE '%' || reference || '%' OR reference = ? LIMIT 1");
+const deleteWebhookByRef = db.prepare("DELETE FROM payment_webhooks WHERE reference = ?");
+const deleteWebhookByHookerId = db.prepare("DELETE FROM payment_webhooks WHERE hooker_id = ?");
+
 
 APPLICATION.use(corsMiddleware);
 APPLICATION.options("/", corsMiddleware);
@@ -54,11 +63,7 @@ APPLICATION.use(BODY_PARSER.urlencoded({ extended: true }));
 
 
 
-const CREDENTIALS_PATH = path.join(process.cwd(), 'Credentials.json');
 const TOKENS_PATH = path.join(process.cwd(), 'tokens.json');
-const CREDENTIALS = MOCK_MODE
-    ? {client_id: "mock", client_secret: "mock", redirect_uris: ["https://localhost:3000/oauth2callback"]}
-    : JSON.parse(fs.readFileSync(CREDENTIALS_PATH, "utf8"));
 
 const jsonParser = BODY_PARSER.json();
 const readToken = async () => {
@@ -80,6 +85,7 @@ const lifeTime = 7 * 24 * 60 * 3600; // 7 Dias de LifeTime do Cookie
 const OAUTH = new OAuth2Server({
     model: {
         getClient: async (clientId, clientSecret) => {
+            console.log("aaaaaaaaaaa ewfder")
             const CLIENTES = (await readToken())["oAuth_server"]["client_data"];
             const client = CLIENTES.find(c => c.clientId === clientId && c.clientSecret === clientSecret);
             return client ? client : false;
@@ -99,7 +105,7 @@ const OAUTH = new OAuth2Server({
             const index = TOKENS.indexOf(token);
             if (index > -1) {
                 TOKENS.splice(index, 1);
-                fs.writeFile(TOKENS_PATH, JSON.stringify(beforeFile, null, 4), (error) => {
+                await fs.promises.writeFile(TOKENS_PATH, JSON.stringify(beforeFile, null, 4), (error) => {
                     if (error) {
                         console.log('Error writing to token.json:', error);
                     } else {
@@ -130,6 +136,7 @@ const OAUTH = new OAuth2Server({
         getUser: async (username, password) => {
             const USERS = (await readToken())["oAuth_server"]["users_information"];
             const user = USERS.find(u => u.username === username && u.password === password);
+            console.log(`got it =>      ${username}  ${password}`)
             return user ? user : false;
         }
     },
@@ -137,17 +144,7 @@ const OAUTH = new OAuth2Server({
     allowBearerTokensInQueryString: true
 });
 
-// Middleware to authenticate requests
-APPLICATION.use((err, req, res, next) => {
-    if (err) {
-        res.status(err.code || 500).json({
-            message: err.message,
-            code: err.code,
-        });
-    } else {
-        next();
-    }
-});
+
 
 async function obtainToken(req, res, next) {
     try {
@@ -174,7 +171,19 @@ async function authenticateRequest(req, res) {
     }
 }
 
-
+APPLICATION.post("/oauth/authenticate", async (req, res, next) => {
+    const token = await obtainToken(req, res, next);
+    if (token) {
+        res.cookie("session_token", token, {
+            path: "/",
+            httpOnly: true,     // Prevent client-side JavaScript from accessing the cookie
+            secure: true,       // Ensures the cookie is only sent over HTTPS
+            sameSite: "strict", // Helps prevent CSRF attacks
+            maxAge: lifeTime     // Cookie expiration time in milliseconds (1 hour)
+        });
+        res.sendStatus(200);
+    }
+});
 
 
 
@@ -239,7 +248,7 @@ const createSale = db.transaction((buyer, comment, products) => {
 
 
 APPLICATION.use(cookieParser());
-APPLICATION.post("/", corsMiddleware, jsonParser, async (req, res) => {
+APPLICATION.post("/", jsonParser, async (req, res) => {
     const content = req.body;
     if ( (content.index === "getAccountInfos" || content.index === "payment_WebHook")
         || ( content.data && (content.data.comanda || content.data.buyer || content.data.products) ))
@@ -465,7 +474,6 @@ APPLICATION.post("/", corsMiddleware, jsonParser, async (req, res) => {
                     total_price = 0.01;
                 }
                 
-
                 const external_reference = `Compra_${identifier}`;
                 console.log(`Produtos Comprados da Comanda ${identifier}`);
 
@@ -503,9 +511,9 @@ APPLICATION.post("/", corsMiddleware, jsonParser, async (req, res) => {
 
                 let print_via = content.do_print_via;
                 if (print_via) {
-                    print_via = "no_ticket";
-                } else {
                     print_via = "seller_ticket";
+                } else {
+                    print_via = "no_ticket";
                 }
 
 
@@ -535,7 +543,7 @@ APPLICATION.post("/", corsMiddleware, jsonParser, async (req, res) => {
                 };
                 
                 try {
-                    const UUID = crypto.randomUUID();
+                    const UUID = CRYPTO.randomUUID();
                     const result = await (await FETCH(URL, {
 
                         method: "POST",
@@ -563,9 +571,12 @@ APPLICATION.post("/", corsMiddleware, jsonParser, async (req, res) => {
             return;
 
         case "payment_WebHook":
-            PAYMENT_WEBHOOKERS[content.reference] = content.hooker_id
-            console.log(PAYMENT_WEBHOOKERS);
-            res.sendStatus(200);
+            if (content.reference && content.hooker_id) {
+                insertWebhook.run(content.reference, content.hooker_id);
+                res.sendStatus(200);
+            } else {
+                res.sendStatus(400);
+            }
             return;
         
         default: break;
@@ -576,8 +587,10 @@ APPLICATION.post("/", corsMiddleware, jsonParser, async (req, res) => {
 
 });
 
-// QUESTÃO DE SEGURANÇA????
-APPLICATION.post("/refresh", corsMiddleware, async (req, res) => {
+
+
+// ML API REST
+APPLICATION.post("/refresh", async (req, res) => {
     const content = req.body;
     if (content.index === "refresh") {
         CLIENTS.forEach(plr => {
@@ -589,8 +602,6 @@ APPLICATION.post("/refresh", corsMiddleware, async (req, res) => {
         res.sendStatus(200);
     }
 });
-
-//
 APPLICATION.post("/callbackML", jsonParser, async (req, res) => {
     const BODY = req.body;
     const HEADERS = req.headers;
@@ -612,30 +623,35 @@ APPLICATION.post("/callbackML", jsonParser, async (req, res) => {
                 })).json();
 
                 if (result) {
-                    console.log(result)
+                    console.log(result);
                     let name;
                     if (result["issuer_id"]) {
                         name = result["issuer_id"];
-                    } else {
+                    } else if (result["point_of_interaction"]?.["transaction_data"]?.["bank_info"]?.["payer"]) {
                         const bank_info = result["point_of_interaction"]["transaction_data"]["bank_info"]["payer"];
                         name = bank_info["long_name"];
+                    } else {
+                        name = "Pagamento";
                     }
 
-                    
                     const changed_reference = result["external_reference"];
-                    const receiver = Object.keys(PAYMENT_WEBHOOKERS).findIndex(external_reference => external_reference.includes(changed_reference));
+                    if (changed_reference) {
+                        // Procura no SQLite
+                        const webhookRow = findWebhookByRef.get(changed_reference, changed_reference);
 
-                    console.log(changed_reference)
-                    console.log(PAYMENT_WEBHOOKERS)
-                    const ID = PAYMENT_WEBHOOKERS[Object.keys(PAYMENT_WEBHOOKERS)[receiver]];
-                    const person = CLIENTS.find(plr => plr["UNIQUE_ID"] === ID);
+                        if (webhookRow) {
+                            const ID = webhookRow.hooker_id;
+                            const person = CLIENTS.find(plr => plr["UNIQUE_ID"] === ID);
 
-                    if (person) {
-                        person["client"].send(JSON.stringify({
-                            data: "payment-received!",
-                            name: name
-                        }));
-                        delete PAYMENT_WEBHOOKERS[Object.keys(PAYMENT_WEBHOOKERS)[receiver]];
+                            if (person && person["client"].readyState === WebSocket.OPEN) {
+                                person["client"].send(JSON.stringify({
+                                    data: "payment-received!",
+                                    name: name
+                                }));
+                            }
+                            // Apaga do SQLite após processar
+                            deleteWebhookByRef.run(webhookRow.reference);
+                        }
                     }
                 }
 
@@ -659,7 +675,9 @@ APPLICATION.post("/callbackML", jsonParser, async (req, res) => {
             }
         });
 
-        const manifest = `id:${BODY["data"]["id"]};request-id:${HEADERS['x-request-id']};ts:${ts};`;
+        const bodyDataId = BODY?.data?.id ?? "";
+        const requestId = HEADERS['x-request-id'] ?? "";
+        const manifest = `id:${bodyDataId};request-id:${requestId};ts:${ts ?? ''};`;
         const SECRET = process.env.SIGNATURE_WEBHOOK;
 
         const hmac = CRYPTO.createHmac('sha256', SECRET);
@@ -679,21 +697,6 @@ APPLICATION.post("/callbackML", jsonParser, async (req, res) => {
 
     console.log("-------------------------")
 });
-
-APPLICATION.post("/oauth/authenticate", corsMiddleware, async (req, res, next) => {
-    const token = await obtainToken(req, res, next);
-    if (token) {
-        res.cookie("session_token", token, {
-            path: "/",
-            httpOnly: true,     // Prevent client-side JavaScript from accessing the cookie
-            secure: true,       // Ensures the cookie is only sent over HTTPS
-            sameSite: "strict", // Helps prevent CSRF attacks
-            maxAge: lifeTime     // Cookie expiration time in milliseconds (1 hour)
-        });
-        res.sendStatus(200);
-    }
-});
-
 
 
 
@@ -728,6 +731,19 @@ WSS.on('connection', (ws) => {
     });
 });
 
+
+
+// Middleware to authenticate requests
+APPLICATION.use((err, req, res, next) => {
+    if (err) {
+        res.status(err.code || 500).json({
+            message: err.message,
+            code: err.code,
+        });
+    } else {
+        next();
+    }
+});
 
 
 // SERVER.listen(PORT, "127.0.0.1", 511, () => console.log(`Back-End listening on port ${PORT}`));

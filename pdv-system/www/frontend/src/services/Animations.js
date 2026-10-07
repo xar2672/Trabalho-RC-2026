@@ -7,7 +7,7 @@ import {ruleCSS, PXtoEM, PXtoVMIN,
 import {addCompra_Caixa, webkitTEST, getAllAvaliacoes, receiveWebHook,
         TEST_MODE, TEST_PRICE_MODE,
         logIn, getAccountINFOS,
-        payPIX} from "./Middle.js";
+        payViaPoint} from "./Middle.js";
 
 
 
@@ -385,10 +385,12 @@ const goToSelectedPayment = (toWhere) => {
                 const key = sessionStorage.getItem("account_key");
                 account_infos = webkitTEST.CONTAS_INTERNAS_BASE[key];
             } else {
+                console.log("got it here!")
                 const INFOS = await getAccountINFOS();
                 if (INFOS.ID && INFOS.creation_date) {
                     account_infos = {"ID": INFOS.ID};
                 } else {
+                    console.log("no")
                     return;
                 }
             }
@@ -719,13 +721,9 @@ const menuEXCLUFUNCS = {
                 case "pix":
                     loader.toggle("fade_in");
                     if (!TEST_MODE) {
-                        const IMG = location.querySelector("img");
-                        if (IMG.classList.contains("loaded")) {IMG.classList.remove("loaded");}
-                        const result = await payPIX();
+                        const result = await payViaPoint("pix", false);
 
                         if (result) {
-                            IMG.src = result["QR_BASE-64"];
-                            IMG.classList.add("loaded");
                             loader.toggle("fade_in");
 
                             playFunctionTUNNEL = async () => {
@@ -748,16 +746,22 @@ const menuEXCLUFUNCS = {
                         const price_change = location.querySelector("#preco_final");
                         price_change.innerText = formatPrices(Number(totalPrice()));
 
-                        playFunctionTUNNEL = async () => {
-                            const results = await receiveWebHook("Venda presencial");
-                            if (results.status === 200 & results.ok) {
-                                loader.toggle("fade_in");
-                                return true;
-                            } else {
-                                throw Error(results.statusText);
+                        const result = await payViaPoint("credit_card", false);
+                        if (result) {
+                            loader.toggle("fade_in");
+
+                            playFunctionTUNNEL = async () => {
+                                const results = await receiveWebHook(result["external_reference"]);
+                                if (results.status === 200 & results.ok) {
+                                    return true;
+                                } else {
+                                    throw Error(results.statusText);
+                                }
                             }
+                            await playFunctionTUNNEL();
                         }
-                        await playFunctionTUNNEL();
+                    } else {
+                        selectMenu(CONTINUE.id, "put-comment");
                     }
                     break;
                 case "debito":
@@ -766,17 +770,46 @@ const menuEXCLUFUNCS = {
                         const price_change = location.querySelector("#preco_final");
                         price_change.innerText = formatPrices(Number(totalPrice()));
 
-                        playFunctionTUNNEL = async () => {
-                            const results = await receiveWebHook("Venda presencial");
-                            console.log(results)
-                            if (results.status === 200 & results.ok) {
-                                loader.toggle("fade_in");
-                                return true;
-                            } else {
-                                throw Error(results.statusText);
+                        const result = await payViaPoint("debt_card", false);
+                        if (result) {
+                            loader.toggle("fade_in");
+
+                            playFunctionTUNNEL = async () => {
+                                const results = await receiveWebHook(result["external_reference"]);
+                                if (results.status === 200 & results.ok) {
+                                    return true;
+                                } else {
+                                    throw Error(results.statusText);
+                                }
                             }
+                            await playFunctionTUNNEL();
+                        } else {
+                            selectMenu(CONTINUE.id, "put-comment");
                         }
-                        await playFunctionTUNNEL();
+                    }
+                    break;
+                case "voucher":
+                    loader.toggle("fade_in");
+                    if (!TEST_MODE) {
+                        const price_change = location.querySelector("#preco_final");
+                        price_change.innerText = formatPrices(Number(totalPrice()));
+
+                        const result = await payViaPoint("voucher", false);
+                        if (result) {
+                            loader.toggle("fade_in");
+
+                            playFunctionTUNNEL = async () => {
+                                const results = await receiveWebHook(result["external_reference"]);
+                                if (results.status === 200 & results.ok) {
+                                    return true;
+                                } else {
+                                    throw Error(results.statusText);
+                                }
+                            }
+                            await playFunctionTUNNEL();
+                        } else {
+                            selectMenu(CONTINUE.id, "put-comment");
+                        }
                     }
                     break;
                 case "dinheiro_fisico":

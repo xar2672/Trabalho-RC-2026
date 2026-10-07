@@ -281,7 +281,7 @@ async function displayComandas(result, CONTAS, LIST) {
                     const QUANT = compra["quant"];
 
                     const receipt_node = copy_receipt.cloneNode(true);
-                    const baseSource = "/www/Website//images/Common/Itens Dispostos/";
+                    const baseSource = "../../images/Common/Itens Dispostos/";
                     
                     const img = receipt_node.querySelector(".img img");
                     img.onerror = () => {

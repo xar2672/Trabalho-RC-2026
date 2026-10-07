@@ -10,7 +10,7 @@ RUN npm install
 WORKDIR /pdv
 COPY . .
 
-WORKDIR /pdv/src/infrastructure/web
+WORKDIR /pdv/src/infrastructure/
 
 EXPOSE 3000
 
