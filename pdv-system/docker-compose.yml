@@ -10,7 +10,7 @@ services:
       - ./www/frontend:/usr/local/apache2/htdocs/
       - ./logs/apache:/usr/local/apache2/logs/
       - ./httpd.conf:/usr/local/apache2/conf/httpd.conf
-      - ./rules:/usr/local/apache2/conf/minhas-regras
+      - ./rules:/usr/local/apache2/conf/rules
     networks:
       - pdv_network
     restart: unless-stopped
@@ -26,23 +26,23 @@ services:
     environment:
       - CHOKIDAR_USEPOLLING=true
     volumes:
-      - ./www/backend/src/infrastructure/:/pdv
+      - ./www/backend/src/:/pdv
       - /pdv/web/node_modules
     command: sh -c "npm install && npm start"
     ports:
-      - "3005:3000"
+      - "3005:3005"
     networks:
       - pdv_network
     restart: unless-stopped
     develop:
       watch:
         - action: sync+restart
-          path: ./www/backend/src/infrastructure/web/
+          path: ./www/backend/src/web/
           target: /pdv/web
           ignore:
             - node_modules/
         - action: rebuild
-          path: ./www/backend/src/infrastructure/web/package.json
+          path: ./www/backend/src/web/package.json
 
   cloudflared:
     image: cloudflare/cloudflared:latest
@@ -61,7 +61,7 @@ services:
     image: amir20/dozzle:latest
     container_name: pdv_log_viewer
     ports:
-      - "8085:8080"
+      - "8085:8085"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
     networks:

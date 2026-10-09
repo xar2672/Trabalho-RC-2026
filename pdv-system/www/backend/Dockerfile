@@ -2,15 +2,15 @@ FROM node:22-bookworm-slim
 
 RUN npm install -g pm2
 
-WORKDIR /pdv/src/infrastructure/web
+WORKDIR /pdv/src/web
 
-COPY src/infrastructure/web/package*.json ./
+COPY src/web/package*.json ./
 RUN npm install
 
 WORKDIR /pdv
 COPY . .
 
-WORKDIR /pdv/src/infrastructure/
+WORKDIR /pdv/src/
 
 EXPOSE 3000
 

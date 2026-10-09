@@ -517,7 +517,7 @@ async function Initiate() {
 
     var changing = false;
     const connect = () => {
-        var socket = new WebSocket("wss://usp.perimin.com.br/wss");
+        var socket = new WebSocket("wss://usp.perimin.com.br/ws");
         socket.addEventListener('open', async () => {
             if (typeof playFunctionTUNNEL === "function") {
                 await playFunctionTUNNEL();

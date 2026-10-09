@@ -229,7 +229,7 @@ async function Initiate() {
 
     var changing = false;
     const connect = () => {
-        const socket = new WebSocket("wss://usp.perimin.com.br/wss");
+        const socket = new WebSocket("wss://usp.perimin.com.br/ws");
         socket.addEventListener('message', async (event) => {
             console.log('Message from server:', event.data);
             if (event.data === "update!" && !changing) {

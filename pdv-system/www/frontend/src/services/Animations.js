@@ -5,7 +5,7 @@ import {ruleCSS, PXtoEM, PXtoVMIN,
         dadosSalvos, perfectLabel, updateSpan, formatPrices
         } from "./Common.js";
 import {addCompra_Caixa, webkitTEST, getAllAvaliacoes, receiveWebHook,
-        TEST_MODE, TEST_PRICE_MODE,
+        TEST_MODE,
         logIn, getAccountINFOS,
         payViaPoint} from "./Middle.js";
 
@@ -554,15 +554,15 @@ const menuEXCLUFUNCS = {
         const CONFIGS = BACK.querySelector("#configs");
         const otherCONFIGS = CONFIGS.querySelector("#other-configurations");
         const selectPRICE_MODE = otherCONFIGS.querySelector("#select-priceMode");
-        if (TEST_PRICE_MODE[0]) {selectPRICE_MODE.checked = true}
+        if (localStorage.getItem("test_price")) {selectPRICE_MODE.checked = true}
 
         if (funcIden["select_priceMode"]) {
             selectPRICE_MODE.removeEventListener("click", funcIden["select_priceMode"]);
             delete funcIden["select_priceMode"];
         }
         const testPriceFUNC = () => {
-            if (selectPRICE_MODE.checked) {TEST_PRICE_MODE[0] = true;}
-            else {TEST_PRICE_MODE[0] = false;}
+            if (selectPRICE_MODE.checked) {localStorage.setItem("test_price", true);}
+            else {localStorage.setItem("test_price", false);}
         }
         
         funcIden["select_priceMode"] = testPriceFUNC;
@@ -621,7 +621,7 @@ const menuEXCLUFUNCS = {
                 const LABEL = perfectLabel(item["produto"]);
 
                 const FILE_NAME = LABEL.split(" ")[0];
-                const baseSource = "/www/Website//images/Common/Itens Dispostos/";
+                const baseSource = "../../images/Common/Itens Dispostos/";
                     
                 const img = new_item.querySelector(".img img");
                 img.onerror = () => {

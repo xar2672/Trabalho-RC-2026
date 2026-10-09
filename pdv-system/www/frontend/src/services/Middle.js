@@ -1,4 +1,5 @@
-import {dadosSalvos, getMinTime} from "./Common.js";
+import { dadosSalvos, getMinTime } from "./Common.js";
+import { webFETCH } from "./fetch/socket.js";
 
 export const webkitTEST = {
     CONTAS_INTERNAS_BASE: {
@@ -128,7 +129,6 @@ export const webkitTEST = {
 }
 
 export const TEST_MODE = false;
-export const TEST_PRICE_MODE = [false];
 
 export const TAB_SIZE = 4; // Tamanho da Comanda
 export const RECURSION_TRIALS = 3;
@@ -143,7 +143,7 @@ export const getURL = () => {
 
 
 async function acessBACK(params) {
-    const URL = getURL() + "/Private";
+    const URL = getURL() + "/" +  params["index"];
     const method = params["method"];
     var response;
 
@@ -161,7 +161,7 @@ async function acessBACK(params) {
                 "Origin": "https://usp.perimin.com.br",
             };
 
-            response = await fetch(URL, {
+            response = await webFETCH(URL, {
                 method: method,
                 body: JSON.stringify(param),
                 headers: headers,
@@ -189,23 +189,27 @@ const FORMAT_TIME = {
 
 export async function logIn(user, pass) {
     if (typeof user === "string" && typeof pass === "string") {
-        const response = await fetch(getURL() + "/Authenticate", {
-            method: "POST",
-            headers: {
-                'Content-Type': 'application/x-www-form-urlencoded',
-            },
-            body: new URLSearchParams({
-                grant_type: "password",
-                username: user,
-                password: pass,
-                client_id: "90bdb3f8_b1de_4250_9dd1_dd8210ac7718",
-                client_secret: "SoJNkMlHRATL74i2RUjZvbIk2IMWgeTm"
-            })
-        });
-
-        if (response.ok) {
-            return response;
-        } else {
+        try {
+            const response = await webFETCH(getURL() + "/Authenticate", {
+                method: "POST",
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: new URLSearchParams({
+                    grant_type: "password",
+                    username: user,
+                    password: pass,
+                    client_id: "90bdb3f8_b1de_4250_9dd1_dd8210ac7718",
+                    client_secret: "SoJNkMlHRATL74i2RUjZvbIk2IMWgeTm"
+                })
+            });
+            if (response.ok) {
+                return response;
+            } else {
+                console.error('Error:', response);
+                return false;
+            }
+        } catch (error) {
             console.error('Error:', response);
             return false;
         }
@@ -439,8 +443,8 @@ export async function payViaPoint(method, do_print) {
     try {
         return recursiveMethod(async () => await acessBACK({
             method: "POST",
-            index: "payPIX",
-            test_mode: TEST_PRICE_MODE[0],
+            index: "payMaquininha",
+            test_mode: localStorage.getItem("test_price"),
             products: JSON.parse(localStorage.getItem("itens")),
             payment_method: method,
             do_print_via: do_print
@@ -450,24 +454,5 @@ export async function payViaPoint(method, do_print) {
         return false;
     }
 }
-export async function payMAQ(value, card) {
-    let horario = new Date;
-    horario = horario.toLocaleString("pt-BR", {
-        hour: "2-digit",
-        minute: "2-digit",
-        second: "2-digit"
-    });
-    
-    let result = await acessBACK({
-        method: "POST",
-        index: "payMaquininha",
-        hour: horario,
-        type: card,
-        value: value
-    });
-
-    console.log(result);
-}
-
 
 
