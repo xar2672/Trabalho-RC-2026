@@ -337,6 +337,8 @@ APPLICATION.post("/oauth/authenticate", jsonParser, async (req, res, next) => {
             maxAge: lifeTime     // Cookie expiration time in milliseconds (1 hour)
         });
         res.sendStatus(200);
+    } else {
+        res.sendStatus(401);
     }
 });
 

@@ -61,7 +61,7 @@ services:
     image: amir20/dozzle:latest
     container_name: pdv_log_viewer
     ports:
-      - "8085:8085"
+      - "8085:8080"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
     networks:
